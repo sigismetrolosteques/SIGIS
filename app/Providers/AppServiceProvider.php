@@ -7,30 +7,37 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Session;
-
+use App\Observers\ModelAuditObserver;
+use App\Models\Solicitud;
+use App\Models\Product;
+use App\Models\Inventory;
+use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
-    public function register()
-{
-    
-}
+    public function register() {}
 
     /**
      * Bootstrap any application services.
      */
     public function boot()
     {
+        $observer = ModelAuditObserver::class;
+
+        Solicitud::observe($observer);
+        Product::observe($observer);
+        Inventory::observe($observer);
+        User::observe($observer);
         Inertia::share([
             'auth' => [
                 'user' => function () {
                     if (!Auth::check()) {
                         return null;
                     }
-                    
+
                     $user = Auth::user();
                     return [
                         'id' => $user->id,
@@ -41,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 },
             ],
-            
+
             // Compartir mensajes flash globalmente
             'flash' => function () {
                 return [
@@ -51,7 +58,7 @@ class AppServiceProvider extends ServiceProvider
                     'warning' => Session::get('warning'),
                 ];
             },
-            
+
             // Compartir errores de validación
             'errors' => function () {
                 return Session::get('errors')

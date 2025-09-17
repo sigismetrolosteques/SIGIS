@@ -1,4 +1,5 @@
 <?php
+
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,11 @@ use App\Http\Controllers\Auth\FirstLoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\RequestController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\AuditController;
 
 // Rutas públicas
 Route::get('/', function () {
@@ -29,7 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/user', [UserController::class, 'index'])->name('user.index');
     Route::get('/user/{user}/edit', [UserController::class, 'edit'])->name('user.edit');
     Route::post('/user/{user}/update', [UserController::class, 'update'])->name('user.update');
-    
+
     // Rutas solo para super_admin
     Route::get('/user/create', [UserController::class, 'create'])->name('user.create');
     Route::post('/user', [UserController::class, 'store'])->name('user.store');
@@ -41,6 +47,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/security-questions', [ProfileController::class, 'updateSecurityQuestions'])->name('profile.security-questions.update');
+    Route::get('/product', [ProductController::class, 'index'])->name('product.index');
+    Route::get('/product/create', [ProductController::class, 'create'])->name('product.create');
+    Route::post('/product', [ProductController::class, 'store'])->name('product.store');
+    Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
+    Route::post('/product/{product}/update', [ProductController::class, 'update'])->name('product.update');
+    Route::post('/product/{product}/delete', [ProductController::class, 'destroy'])->name('product.destroy');
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
+    Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+    Route::get('/inventory/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
+    Route::post('/inventory/{inventory}/update', [InventoryController::class, 'update'])->name('inventory.update');
+    Route::post('/inventory/{inventory}/delete', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::get('/solicitudes', [RequestController::class, 'index'])->name('solicitudes.index');
+    Route::get('/solicitudes/create', [RequestController::class, 'create'])->name('solicitudes.create');
+    Route::post('/solicitudes', [RequestController::class, 'store'])->name('solicitudes.store');
+
+    // Botones aprobar/rechazar
+    Route::post('/solicitudes/{solicitud}/update-status', [RequestController::class, 'updateStatus'])
+        ->name('solicitudes.updateStatus');
+    Route::get('/reportes/solicitudes', [ReportController::class, 'index'])->name('reportes.solicitudes.index');
+    Route::get('/reportes/solicitudes/export', [ReportController::class, 'exportCsv'])->name('reportes.solicitudes.export');
+    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index');
+    Route::get('/auditoria/export', [AuditController::class, 'exportCsv'])->name('auditoria.export');
 });
 
 // Rutas para cambio/reseteo de contraseña (sin autenticación)
