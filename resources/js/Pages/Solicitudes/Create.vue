@@ -27,14 +27,17 @@ const inventoriesForProduct = computed(() => {
   return props.inventories.filter(i => i.product_id === Number(form.product_id));
 });
 
-// lista de cantidades (1..stock) para el inventario seleccionado
+// lista de cantidades (1..stock disponible) para el inventario seleccionado
 const quantityOptions = computed(() => {
   const inv = props.inventories.find(i => i.id === Number(form.inventory_id));
   if (!inv) return [];
-  const qty = Number(inv.quantity) || 0;
-  // construir array [1,2,...,qty] pero limitar tamaño razonable
+
+  // stock disponible = total - reservado
+  const available = (Number(inv.quantity) || 0) - (Number(inv.reserved_quantity) || 0);
+  if (available <= 0) return [];
+
   const arr = [];
-  for (let i = 1; i <= qty; i++) {
+  for (let i = 1; i <= available; i++) {
     arr.push(i);
     if (i >= 1000) break; // seguridad
   }
@@ -48,6 +51,7 @@ watch(() => form.product_id, () => {
   form.clearErrors();
   generalError.value = '';
 });
+
 watch(() => form.inventory_id, () => {
   form.quantity = 1;
   form.clearErrors();
@@ -101,7 +105,7 @@ function submit() {
                   :class="{ 'border-red-500': form.errors.inventory_id }">
             <option value="">-- Selecciona inventario --</option>
             <option v-for="inv in inventoriesForProduct" :key="inv.id" :value="inv.id">
-              {{ inv.location ?? ('ID ' + inv.id) }} — Disponible: {{ inv.quantity }}
+              {{ inv.location ?? ('ID ' + inv.id) }} — Disponible: {{ (inv.quantity - inv.reserved_quantity) }} (de {{ inv.quantity }})
             </option>
           </select>
           <div v-if="form.errors.inventory_id" class="text-red-600 mt-1 text-sm">{{ form.errors.inventory_id }}</div>

@@ -16,6 +16,7 @@ class Solicitud extends Model
         'code',
         'product_id',
         'inventory_id',
+    'quantity',
         'created_by',
         'from_gerencia_id',
         'to_gerencia_id',
@@ -29,10 +30,12 @@ class Solicitud extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function fromGerencia()
-    {
-        return $this->belongsTo(Gerencia::class, 'from_gerencia_id');
-    }
+  // en el modelo Solicitud.php
+public function fromGerencia()
+{
+    return $this->belongsTo(Gerencia::class, 'from_gerencia_id');
+}
+
 
     public function toGerencia()
     {

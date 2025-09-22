@@ -63,6 +63,15 @@ class InventoryController extends Controller
         return redirect()->route('inventory.index')->with('success', 'Registro de inventario actualizado');
     }
 
+    public function show($id)
+{
+    $inventory = Inventory::with('product')->findOrFail($id);
+
+    return Inertia::render('Inventory/Show', [
+        'inventory' => $inventory,
+    ]);
+}
+    
     public function destroy(Inventory $inventory)
     {
         $inventory->delete();

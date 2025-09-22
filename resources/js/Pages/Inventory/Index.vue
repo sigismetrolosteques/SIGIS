@@ -62,7 +62,7 @@ function destroyInventory() {
       {{ successMessage }}
     </div>
 
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-6" v-if="$page.props.auth.user.roles.includes('super_admin')"> 
       <h1 class="text-2xl font-bold">Gestión de Inventario</h1>
       <Link :href="route('inventory.create')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
         Nuevo Registro
@@ -74,34 +74,49 @@ function destroyInventory() {
     </div>
 
     <div v-else class="bg-white shadow rounded border overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-100 border-b">
-          <tr>
-            <th class="py-3 px-4 text-left">Producto</th>
-            <th class="py-3 px-4 text-left">Cantidad</th>
-            <th class="py-3 px-4 text-left">Ubicación</th>
-            <th class="py-3 px-4 text-left">Notas</th>
-            <th class="py-3 px-4 text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="inv in inventories.data" :key="inv.id" class="border-b">
-            <td class="py-3 px-4">{{ inv.product.name }}</td>
-            <td class="py-3 px-4">{{ inv.quantity }}</td>
-            <td class="py-3 px-4">{{ inv.location }}</td>
-            <td class="py-3 px-4">{{ inv.notes }}</td>
-            <td class="py-3 px-4 text-center flex justify-center gap-2">
-              <Link :href="route('inventory.edit', inv.id)" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600">
-                Editar
-              </Link>
-              <button @click.prevent="confirmDelete(inv.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
-                Eliminar
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <table class="w-full">
+    <thead class="bg-gray-100 border-b">
+      <tr>
+        <th class="py-3 px-4 text-left">Foto</th>
+        <th class="py-3 px-4 text-left">Código</th>
+        <th class="py-3 px-4 text-left">Producto</th>
+        <th class="py-3 px-4 text-left">Cantidad</th>
+        <th class="py-3 px-4 text-left">Ubicación</th>
+        <th class="py-3 px-4 text-left">Notas</th>
+        <th class="py-3 px-4 text-center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="inv in inventories.data" :key="inv.id" class="border-b">
+        <td class="py-3 px-4">
+          <img v-if="inv.product.image" :src="`/img/${inv.product.image}`" alt="Foto" class="w-16 h-16 object-cover rounded" />
+        </td>
+        <td class="py-3 px-4">{{ inv.product.id }}</td>
+        <td class="py-3 px-4">{{ inv.product.name }}</td>
+        <td class="py-3 px-4">{{ inv.quantity }}</td>
+        <td class="py-3 px-4">{{ inv.location }}</td>
+        <td class="py-3 px-4">{{ inv.notes }}</td>
+        <td class="py-3 px-4 text-center flex justify-center gap-2">
+          <!-- Ver más disponible para todos -->
+          <Link :href="route('inventory.show', inv.id)" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+            Ver más
+          </Link>
+
+          <!-- Editar y eliminar solo para admins -->
+          <template v-if="$page.props.auth.user.roles.includes('super_admin')">
+            <Link :href="route('inventory.edit', inv.id)" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600">
+              Editar
+            </Link>
+            <button @click.prevent="confirmDelete(inv.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+              Eliminar
+            </button>
+          </template>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
 
     <Pagination :links="inventories.links" class="mt-4" />
   </AdminLayout>

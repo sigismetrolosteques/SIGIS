@@ -190,7 +190,10 @@ const isSuperAdmin = computed(() => {
         </Link>
         <!-- Perfil para otros usuarios -->
         <Link
-          v-else
+         v-if="
+            $page.props.auth.user.roles[0] === 'super_admin' ||
+            $page.props.auth.user.roles[0] === 'admin'
+          "
           href="/profile"
           class="flex items-center px-4 py-3 rounded-lg transition-all duration-200 hover:shadow-lg"
           :class="{

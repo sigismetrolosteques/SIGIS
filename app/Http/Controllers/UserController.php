@@ -3,153 +3,154 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Gerencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use App\Services\RoleService;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\WelcomeUserMail;
 
 class UserController extends Controller
 {
-    use AuthorizesRequests;
+   public function index()
+{
+    $authUser = Auth::user();
 
-    public function index()
-    {
-        $authUser = auth()->user();
-        
-        // Verificar rol SUPER_ADMIN con consulta directa
-        $isSuperAdmin = DB::table('model_has_roles')
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->where('model_has_roles.model_id', $authUser->id)
-            ->where('roles.name', 'super_admin')
-            ->exists();
-        
-        if ($isSuperAdmin) {
-            $users = User::with('roles:id,name')
-                ->latest()
-                ->paginate(10);
-        } else {
-            $users = User::where('id', $authUser->id)
-                ->with('roles:id,name')
-                ->paginate(1);
-        }
+    $isSuperAdmin = DB::table('model_has_roles')
+        ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+        ->where('model_has_roles.model_id', $authUser->id)
+        ->where('roles.name', 'super_admin')
+        ->exists();
 
-        return Inertia::render('User/Index', [
-            'users' => $users,
-            'can' => [
-                'create' => $isSuperAdmin,
-                'edit' => true,
-                'delete' => $isSuperAdmin,
-            ],
-            'is_super_admin' => $isSuperAdmin
-        ]);
+    if ($isSuperAdmin) {
+        $users = User::with(['roles:id,name', 'gerencia:id,name'])
+            ->latest()
+            ->paginate(10);
+    } else {
+        $users = User::where('id', $authUser->id)
+            ->with(['roles:id,name', 'gerencia:id,nombre'])
+            ->paginate(1);
     }
+
+    return Inertia::render('User/Index', [
+        'users' => $users,
+        'can' => [
+            'create' => $isSuperAdmin,
+            'edit' => true,
+            'delete' => $isSuperAdmin,
+        ],
+        'is_super_admin' => $isSuperAdmin
+    ]);
+}
 
     public function create()
     {
         return Inertia::render('User/Create', [
             'roles' => Role::select('id', 'name')->get(),
+            'gerencias' => Gerencia::all(),
         ]);
     }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|unique:users',
-        'cedula' => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users',
-    ]);
+    {
+        $request->validate([
+            'name'        => 'required|string|max:255',
+            'email'       => 'required|email|unique:users',
+            'cedula'      => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users',
+            'gerencia_id' => 'required|exists:gerencias,id',
+        ]);
 
-    $tempPassword = Str::random(8);
-    
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'cedula' => $request->cedula,
-        'password' => Hash::make($tempPassword),
-        'is_first_login' => true,
-        'security_question_1' => null,
-        'security_answer_1' => null,
-        'security_question_2' => null,
-        'security_answer_2' => null,
-        'security_question_3' => null,
-        'security_answer_3' => null,
-    ]);
+        $tempPassword = Str::random(8);
 
-    $user->assignRole('admin');
+        $user = User::create([
+            'name'        => $request->name,
+            'email'       => $request->email,
+            'cedula'      => $request->cedula,
+            'gerencia_id' => $request->gerencia_id,
+            'password'    => Hash::make($tempPassword),
+            'is_first_login' => true,
+            'security_question_1' => null,
+            'security_answer_1'   => null,
+            'security_question_2' => null,
+            'security_answer_2'   => null,
+            'security_question_3' => null,
+            'security_answer_3'   => null,
+        ]);
 
-    // Enviar correo de bienvenida
-    try {
-        Mail::to($user->email)->send(new WelcomeUserMail(
-            $user->name,
-            $user->email,
-            $tempPassword
-        ));
-    } catch (\Exception $e) {
-        Log::error('Error enviando correo de bienvenida: ' . $e->getMessage());
-        // Puedes decidir si quieres continuar o retornar un error aquí
+        $user->assignRole('admin');
+
+        // Enviar correo de bienvenida
+        try {
+            Mail::to($user->email)->send(new WelcomeUserMail(
+                $user->name,
+                $user->email,
+                $tempPassword
+            ));
+        } catch (\Exception $e) {
+            Log::error('Error enviando correo de bienvenida: ' . $e->getMessage());
+        }
+
+        return redirect()->route('user.index')->with('success', 'Usuario creado correctamente');
     }
 
-    return redirect()->route('user.index')->with('success', 'Usuario creado correctamente');
-}
     public function edit(User $user)
     {
-        // Verificar permisos
         if (!auth()->user()->hasRole('super_admin') && auth()->id() != $user->id) {
             abort(403, 'No tienes permiso para editar este usuario');
         }
 
         return Inertia::render('User/Edit', [
-            'user' => $user->load('roles:id,name'),
+            'user' => $user->load('roles:id,name', 'gerencia:id,nombre'),
             'roles' => auth()->user()->hasRole('super_admin')
                 ? app(RoleService::class)->getRoles()
                 : null,
+            'gerencias' => Gerencia::all(),
             'canEditRole' => auth()->user()->hasRole('super_admin'),
         ]);
     }
 
-   public function update(Request $request, User $user)
-{
-    // Verificar permisos
-    if (!auth()->user()->hasRole('super_admin') && auth()->id() != $user->id) {
-        return back()->withErrors(['general' => 'No tienes permiso para actualizar este usuario']);
-    }
-
-    try {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'cedula' => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users,cedula,' . $user->id,
-            'role' => 'nullable|exists:roles,id',
-        ]);
-
-        if (auth()->user()->hasRole('super_admin') && isset($validated['role'])) {
-            $user->syncRoles([$validated['role']]);
+    public function update(Request $request, User $user)
+    {
+        if (!auth()->user()->hasRole('super_admin') && auth()->id() != $user->id) {
+            return back()->withErrors(['general' => 'No tienes permiso para actualizar este usuario']);
         }
 
-        $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'cedula' => $validated['cedula'],
-        ]);
+        try {
+            $validated = $request->validate([
+                'name'        => 'required|string|max:255',
+                'email'       => 'required|email|unique:users,email,' . $user->id,
+                'cedula'      => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users,cedula,' . $user->id,
+                'gerencia_id' => 'required|exists:gerencias,id',
+                'role'        => 'nullable|exists:roles,id',
+            ]);
 
-        return redirect()->route('user.index')->with('success', 'Usuario actualizado correctamente');
+            if (auth()->user()->hasRole('super_admin') && isset($validated['role'])) {
+                $user->syncRoles([$validated['role']]);
+            }
 
-    } catch (\Exception $e) {
-        Log::error('Error actualizando usuario: ' . $e->getMessage());
-        return back()->withErrors(['general' => 'Ocurrió un error al guardar los cambios. Por favor, inténtalo de nuevo.']);
+            $user->update([
+                'name'        => $validated['name'],
+                'email'       => $validated['email'],
+                'cedula'      => $validated['cedula'],
+                'gerencia_id' => $validated['gerencia_id'],
+            ]);
+
+            return redirect()->route('user.index')->with('success', 'Usuario actualizado correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error actualizando usuario: ' . $e->getMessage());
+            return back()->withErrors(['general' => 'Ocurrió un error al guardar los cambios. Por favor, inténtalo de nuevo.']);
+        }
     }
-}
- public function destroy(User $user)
-{
-    $user->delete();
-    return redirect()->route('user.index')->with('success', 'Usuario eliminado correctamente');
-}
+
+    public function destroy(User $user)
+    {
+        $user->delete();
+        return redirect()->route('user.index')->with('success', 'Usuario eliminado correctamente');
+    }
 }

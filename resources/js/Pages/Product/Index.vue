@@ -73,7 +73,7 @@ onMounted(() => {
     </div>
 
     <!-- Encabezado y botón crear -->
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-6" v-if="$page.props.auth.user.roles.includes('super_admin')">
       <h1 class="text-2xl font-bold">Gestión de Productos</h1>
       <Link :href="route('product.create')"
             class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
@@ -94,7 +94,7 @@ onMounted(() => {
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Imagen</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Nombre</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Descripción</th>
-            <th class="py-3 px-4 font-semibold text-gray-700 text-center">Acciones</th>
+            <th class="py-3 px-4 font-semibold text-gray-700 text-center" v-if="$page.props.auth.user.roles.includes('super_admin')">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -104,7 +104,8 @@ onMounted(() => {
             </td>
             <td class="py-3 px-4">{{ product.name }}</td>
             <td class="py-3 px-4">{{ product.description }}</td>
-            <td class="py-3 px-4 text-center flex justify-center gap-3">
+            <td class="py-3 px-4 text-center flex justify-center gap-3" v-if="$page.props.auth.user.roles.includes('super_admin')">
+            
               <Link :href="route('product.edit', product.id)"
                     class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition shadow-md hover:shadow-lg">
                 Editar

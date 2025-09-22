@@ -1,8 +1,9 @@
 <script setup>
-import { ref } from 'vue';
-import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { Link, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
+import Chart from 'chart.js/auto';
 
 const props = defineProps({
   solicitudes: Object,
@@ -22,37 +23,120 @@ const form = useForm({
   per_page: props.filters.per_page || 15,
 });
 
-function applyFilters() {
-  form.get(route('reportes.solicitudes.index'), { preserveState: true, preserveScroll: true });
-}
-
-function resetFilters() {
-  form.reset('from', 'to', 'status', 'from_gerencia_id', 'to_gerencia_id', 'product_id');
-  form.get(route('reportes.solicitudes.index'), { preserveState: true });
-}
-
-function exportCsv() {
-  // construimos URL con query params e iniciamos descarga (usa Ziggy route)
-  const params = new URLSearchParams({
+// Construir objeto de params (evita mandar keys vacías si quieres)
+function buildParamsObject() {
+  return {
     from: form.from || '',
     to: form.to || '',
     status: form.status || '',
     from_gerencia_id: form.from_gerencia_id || '',
     to_gerencia_id: form.to_gerencia_id || '',
     product_id: form.product_id || '',
-  }).toString();
-
-  window.location.href = route('reportes.solicitudes.export') + (params ? ('?' + params) : '');
+    per_page: form.per_page || '',
+  };
 }
+
+// Aplicar filtros: request Inertia con params
+function applyFilters() {
+  const params = buildParamsObject();
+  router.get(route('reportes.solicitudes'), params, { preserveState: true, preserveScroll: true });
+}
+
+// Reset filtros
+function resetFilters() {
+  form.reset('from', 'to', 'status', 'from_gerencia_id', 'to_gerencia_id', 'product_id', 'per_page');
+  router.get(route('reportes.solicitudes'), {}, { preserveState: true });
+}
+
+// Exportar PDF (abre nueva pestaña con filtros)
+function exportPdf() {
+  const params = new URLSearchParams(buildParamsObject()).toString();
+  const url = route('reportes.solicitudes.pdf') + (params ? ('?' + params) : '');
+  window.open(url, '_blank');
+}
+
+/* --- Charts --- */
+const statusChartRef = ref(null);
+const productChartRef = ref(null);
+let statusChart = null;
+let productChart = null;
+
+function destroyCharts() {
+  try { if (statusChart) statusChart.destroy(); } catch(e){}
+  try { if (productChart) productChart.destroy(); } catch(e){}
+  statusChart = null;
+  productChart = null;
+}
+
+function renderCharts(solicitudesData = []) {
+  destroyCharts();
+
+  // Estado
+  const pendientes = solicitudesData.filter(s => s.status === 'pendiente').length;
+  const aprobados = solicitudesData.filter(s => s.status === 'aprobado').length;
+  const rechazados = solicitudesData.filter(s => s.status === 'rechazado').length;
+
+  if (statusChartRef.value) {
+    statusChart = new Chart(statusChartRef.value, {
+      type: 'doughnut',
+      data: {
+        labels: ['Pendiente', 'Aprobado', 'Rechazado'],
+        datasets: [{ data: [pendientes, aprobados, rechazados], backgroundColor: ['#F59E0B','#10B981','#EF4444'] }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  // Por producto (lineal)
+  const byProduct = {};
+  solicitudesData.forEach(s => {
+    const name = s.product?.name || 'Sin producto';
+    byProduct[name] = (byProduct[name] || 0) + 1;
+  });
+
+  if (productChartRef.value) {
+    productChart = new Chart(productChartRef.value, {
+      type: 'line',
+      data: {
+        labels: Object.keys(byProduct),
+        datasets: [{
+          label: 'Solicitudes',
+          data: Object.values(byProduct),
+          fill: false,
+          tension: 0.25,
+          borderWidth: 2,
+          borderColor: '#3B82F6',
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } }
+      }
+    });
+  }
+}
+
+// render inicial
+onMounted(() => {
+  renderCharts(props.solicitudes?.data || []);
+});
+
+// volver a renderizar cuando los datos del servidor cambian (filtros/paginación)
+watch(() => props.solicitudes?.data, (nv) => renderCharts(nv || []));
+
+// destruir al desmontar
+onBeforeUnmount(() => destroyCharts());
 </script>
 
 <template>
   <AdminLayout title="Reportes - Solicitudes">
-    <div class="p-6">
-      <div class="flex items-center justify-between mb-6">
+    <div class="p-6 space-y-6">
+      <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Reportes: Solicitudes</h1>
-        <div>
-          <button @click="exportCsv" class="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Exportar CSV</button>
+        <div class="flex gap-2">
+          <button @click="exportPdf" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Exportar PDF</button>
         </div>
       </div>
 
@@ -60,15 +144,15 @@ function exportCsv() {
       <div class="bg-white p-4 rounded shadow mb-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium mb-1">Desde</label>
+            <label class="block text-sm mb-1">Desde</label>
             <input v-model="form.from" type="date" class="w-full border rounded px-2 py-1" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">Hasta</label>
+            <label class="block text-sm mb-1">Hasta</label>
             <input v-model="form.to" type="date" class="w-full border rounded px-2 py-1" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">Estado</label>
+            <label class="block text-sm mb-1">Estado</label>
             <select v-model="form.status" class="w-full border rounded px-2 py-1">
               <option value="">-- Todos --</option>
               <option value="pendiente">Pendiente</option>
@@ -76,29 +160,33 @@ function exportCsv() {
               <option value="rechazado">Rechazado</option>
             </select>
           </div>
+
           <div>
-            <label class="block text-sm font-medium mb-1">Producto</label>
+            <label class="block text-sm mb-1">Producto</label>
             <select v-model="form.product_id" class="w-full border rounded px-2 py-1">
               <option value="">-- Todos --</option>
               <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
             </select>
           </div>
+
           <div>
-            <label class="block text-sm font-medium mb-1">De Gerencia</label>
+            <label class="block text-sm mb-1">De Gerencia</label>
             <select v-model="form.from_gerencia_id" class="w-full border rounded px-2 py-1">
               <option value="">-- Todas --</option>
               <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>
           </div>
+
           <div>
-            <label class="block text-sm font-medium mb-1">A Gerencia</label>
+            <label class="block text-sm mb-1">A Gerencia</label>
             <select v-model="form.to_gerencia_id" class="w-full border rounded px-2 py-1">
               <option value="">-- Todas --</option>
               <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>
           </div>
+
           <div>
-            <label class="block text-sm font-medium mb-1">Por página</label>
+            <label class="block text-sm mb-1">Por página</label>
             <select v-model="form.per_page" class="w-full border rounded px-2 py-1">
               <option value="10">10</option>
               <option value="15">15</option>
@@ -106,6 +194,7 @@ function exportCsv() {
               <option value="50">50</option>
             </select>
           </div>
+
           <div class="flex items-end gap-2">
             <button @click="applyFilters" class="px-3 py-2 bg-green-600 text-white rounded">Aplicar</button>
             <button @click="resetFilters" class="px-3 py-2 bg-gray-300 rounded">Reset</button>
@@ -114,7 +203,7 @@ function exportCsv() {
       </div>
 
       <!-- resumen -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Total solicitudes</div>
           <div class="text-2xl font-bold">{{ totales.total }}</div>
@@ -129,6 +218,18 @@ function exportCsv() {
         </div>
       </div>
 
+      <!-- charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-4 rounded shadow">
+          <h3 class="font-semibold mb-2">Solicitudes por estado</h3>
+          <canvas ref="statusChartRef"></canvas>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <h3 class="font-semibold mb-2">Solicitudes por producto (lineal)</h3>
+          <canvas ref="productChartRef"></canvas>
+        </div>
+      </div>
+
       <!-- tabla -->
       <div class="bg-white shadow rounded overflow-hidden">
         <table class="w-full">
@@ -137,7 +238,6 @@ function exportCsv() {
               <th class="py-2 px-3 text-left">Código</th>
               <th class="py-2 px-3 text-left">Producto</th>
               <th class="py-2 px-3 text-left">De</th>
-              <th class="py-2 px-3 text-left">A</th>
               <th class="py-2 px-3 text-left">Cantidad</th>
               <th class="py-2 px-3 text-left">Estado</th>
               <th class="py-2 px-3 text-left">Fecha</th>
@@ -147,8 +247,7 @@ function exportCsv() {
             <tr v-for="s in solicitudes.data" :key="s.id" class="border-b">
               <td class="py-2 px-3 font-mono">{{ s.code }}</td>
               <td class="py-2 px-3">{{ s.product?.name }}</td>
-              <td class="py-2 px-3">{{ s.from_gerencia?.name }}</td>
-              <td class="py-2 px-3">{{ s.to_gerencia?.name }}</td>
+              <td class="py-2 px-3">{{ s.fromGerencia?.name || s.from_gerencia?.name }}</td>
               <td class="py-2 px-3">{{ s.quantity ?? '-' }}</td>
               <td class="py-2 px-3 capitalize">{{ s.status }}</td>
               <td class="py-2 px-3">{{ s.created_at }}</td>

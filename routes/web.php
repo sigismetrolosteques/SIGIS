@@ -59,16 +59,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/inventory/{inventory}/edit', [InventoryController::class, 'edit'])->name('inventory.edit');
     Route::post('/inventory/{inventory}/update', [InventoryController::class, 'update'])->name('inventory.update');
     Route::post('/inventory/{inventory}/delete', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::get('/inventory/{inventory}', [App\Http\Controllers\InventoryController::class, 'show'])
+    ->name('inventory.show');
+
+    
     Route::get('/solicitudes', [RequestController::class, 'index'])->name('solicitudes.index');
     Route::get('/solicitudes/create', [RequestController::class, 'create'])->name('solicitudes.create');
     Route::post('/solicitudes', [RequestController::class, 'store'])->name('solicitudes.store');
+  
+Route::get('/solicitudes/{solicitud}/pdf', [RequestController::class, 'generatePDF'])
+    ->name('solicitudes.pdf');
 
     // Botones aprobar/rechazar
     Route::post('/solicitudes/{solicitud}/update-status', [RequestController::class, 'updateStatus'])
         ->name('solicitudes.updateStatus');
-    Route::get('/reportes/solicitudes', [ReportController::class, 'index'])->name('reportes.solicitudes.index');
-    Route::get('/reportes/solicitudes/export', [ReportController::class, 'exportCsv'])->name('reportes.solicitudes.export');
-    Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index');
+    Route::get('/reportes/solicitudes', [ReportController::class, 'index'])->name('reportes.solicitudes');
+Route::get('/reportes/solicitudes/pdf', [ReportController::class, 'exportPDF'])->name('reportes.solicitudes.pdf');
+Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index');
     Route::get('/auditoria/export', [AuditController::class, 'exportCsv'])->name('auditoria.export');
 });
 

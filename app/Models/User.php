@@ -18,19 +18,20 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-protected $fillable = [
-    'name',
-    'email',
-    'cedula',
-    'password',
-    'security_question_1',
-    'security_answer_1',
-    'security_question_2',
-    'security_answer_2',
-    'security_question_3',
-    'security_answer_3',
-    'is_first_login',
-];
+    protected $fillable = [
+        'name',
+        'email',
+        'cedula',
+        'password',
+        'security_question_1',
+        'security_answer_1',
+        'security_question_2',
+        'security_answer_2',
+        'security_question_3',
+        'security_answer_3',
+        'is_first_login',
+        'gerencia_id',
+    ];
     protected $guarded = [];
     // Hashear la respuesta de seguridad al guardar
     protected static function booted()
@@ -46,7 +47,6 @@ protected $fillable = [
                 $user->security_answer_3 = bcrypt($user->security_answer_3);
             }
         });
-
     }
     /**
      * The attributes that should be hidden for serialization.
@@ -61,12 +61,12 @@ protected $fillable = [
         'security_answer_3',
     ];
 
-  protected $casts = [
-    'security_answer_1' => 'hashed',
-    'security_answer_2' => 'hashed',
-    'security_answer_3' => 'hashed',
-     'is_first_login' => 'boolean'
-];
+    protected $casts = [
+        'security_answer_1' => 'hashed',
+        'security_answer_2' => 'hashed',
+        'security_answer_3' => 'hashed',
+        'is_first_login' => 'boolean'
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -90,5 +90,13 @@ protected $fillable = [
      {
          return $this->getRoleNames();
      }*/
+
+    /**
+     * Relación con Gerencia
+     */
+    public function gerencia()
+{
+    return $this->belongsTo(Gerencia::class, 'gerencia_id');
+}
 
 }

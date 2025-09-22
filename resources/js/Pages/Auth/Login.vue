@@ -103,7 +103,7 @@ const submit = () => {
         <!-- Campo Email -->
         <div class="relative">
           <input id="email" type="email" placeholder="Correo Electrónico" v-model="form.email" :class="{ 'border-red-500': form.errors.email }"
-            class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500" />
+            class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500" required/>
           <!-- Este mensaje aparecerá debajo del input -->
           <!--p v-if="form.errors.email" class="mt-1 text-sm text-red-600 ml-2">
             {{ form.errors.email }}

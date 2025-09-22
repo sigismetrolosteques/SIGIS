@@ -7,6 +7,7 @@ const props = defineProps({
   user: Object,
   canEditRole: Boolean,
   roles: Array,
+  gerencias: Array, // 👈 lista de gerencias desde el backend
   flash: Object,
   errors: Object
 });
@@ -19,15 +20,16 @@ const form = useForm({
   email: props.user.email,
   cedula: props.user.cedula,
   role: props.user.roles[0]?.id,
+  gerencia_id: props.user.gerencia_id ?? '', // 👈 agregar gerencia
 });
 
 const submit = () => {
-  form.post(route('user.update', props.user.id), {
+  form.post(route('user.update', props.user.id), { // 👈 usar put
     onSuccess: () => {
       successMessage.value = '¡Usuario actualizado correctamente!';
       setTimeout(() => (successMessage.value = ''), 5000);
     },
-    onError: (errors) => {
+    onError: () => {
       generalError.value = 'Por favor corrige los errores del formulario.';
     }
   });
@@ -62,7 +64,7 @@ const clearError = (field) => {
       <!-- Formulario -->
       <form @submit.prevent="submit">
         <div class="space-y-6">
-          <!-- Nombre, Email y Cédula -->
+          <!-- Nombre, Email, Cédula -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="text-sm font-medium text-gray-700">Nombre</label>
@@ -91,13 +93,22 @@ const clearError = (field) => {
             </div>
           </div>
 
+          <!-- Gerencia -->
+          <div>
+            <label class="text-sm font-medium text-gray-700">Coordinación</label>
+            <select v-model="form.gerencia_id"
+              class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+              <option value="">Seleccione una Coordinación</option>
+              <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
+            </select>
+            <div v-if="form.errors.gerencia_id" class="mt-1 text-sm text-red-600">{{ form.errors.gerencia_id }}</div>
+          </div>
 
-
-          <!-- Botón de enviar -->
-<div class="flex justify-end mt-8 space-x-4">
+          <!-- Botón -->
+          <div class="flex justify-end mt-8 space-x-4">
             <Link :href="route('user.index')"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            Cancelar
+              class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-white bg-gray-500 hover:bg-gray-400">
+              Cancelar
             </Link>
             <button type="submit"
               class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center"

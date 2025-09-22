@@ -5,7 +5,8 @@ import { ref, watch } from 'vue';
 
 const props = defineProps({
   flash: Object,
-  errors: Object
+  errors: Object,
+  gerencias: Array, // 👈 aquí recibimos la lista
 });
 
 const successMessage = ref(props.flash?.success || '');
@@ -15,6 +16,7 @@ const form = useForm({
   name: '',
   email: '',
   cedula: '',
+  gerencia_id: '', // 👈 nuevo campo
 });
 
 // Validaciones personalizadas
@@ -22,7 +24,6 @@ const validateForm = () => {
   let isValid = true;
   generalError.value = '';
 
-  // Validar nombre
   if (!form.name.trim()) {
     form.setError('name', 'El nombre es obligatorio');
     isValid = false;
@@ -31,7 +32,6 @@ const validateForm = () => {
     isValid = false;
   }
 
-  // Validar email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!form.email.trim()) {
     form.setError('email', 'El email es obligatorio');
@@ -41,13 +41,17 @@ const validateForm = () => {
     isValid = false;
   }
 
-  // Validar cédula
   const cedulaRegex = /^[VEve]-?\d{5,9}$/;
   if (!form.cedula.trim()) {
     form.setError('cedula', 'La cédula es obligatoria');
     isValid = false;
   } else if (!cedulaRegex.test(form.cedula.toUpperCase())) {
     form.setError('cedula', 'Formato válido: V-12345678 o E-987654321');
+    isValid = false;
+  }
+
+  if (!form.gerencia_id) {
+    form.setError('gerencia_id', 'Debe seleccionar una gerencia');
     isValid = false;
   }
 
@@ -70,7 +74,6 @@ const submit = () => {
     },
     onError: (errors) => {
       generalError.value = 'Hubo un error al crear el usuario. Verifica los datos.';
-      // Mapear errores del backend a español
       if (errors.email && errors.email.includes('already been taken')) {
         form.setError('email', 'Este email ya está registrado');
       }
@@ -88,11 +91,12 @@ const clearError = (field) => {
   generalError.value = '';
 };
 
-// Limpiar mensajes cuando se edita un campo
 watch(() => form.name, () => clearError('name'));
 watch(() => form.email, () => clearError('email'));
 watch(() => form.cedula, () => clearError('cedula'));
+watch(() => form.gerencia_id, () => clearError('gerencia_id'));
 </script>
+
 
 <template>
   <AdminLayout title="Crear Usuario">
@@ -120,8 +124,7 @@ watch(() => form.cedula, () => clearError('cedula'));
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="text-sm font-medium text-gray-700">Nombre</label>
-              <input v-model="form.name" @input="clearError('name')" 
-                :class="{ 'border-red-500': form.errors.name }"
+              <input v-model="form.name" @input="clearError('name')" :class="{ 'border-red-500': form.errors.name }"
                 class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition"
                 placeholder="Ej: Juan Pérez" />
               <div v-if="form.errors.name" class="mt-1 text-sm text-red-600">
@@ -152,6 +155,19 @@ watch(() => form.cedula, () => clearError('cedula'));
             </div>
           </div>
 
+          <div>
+            <label class="text-sm font-medium text-gray-700">Coordinación</label>
+            <select v-model="form.gerencia_id" :class="{ 'border-red-500': form.errors.gerencia_id }"
+              class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+              <option value="">Seleccione una Coordinación</option>
+              <option v-for="g in props.gerencias" :key="g.id" :value="g.id">
+                {{ g.name }}
+              </option>
+            </select>
+            <div v-if="form.errors.gerencia_id" class="mt-1 text-sm text-red-600">
+              <i class="fas fa-exclamation-circle mr-1"></i> {{ form.errors.gerencia_id }}
+            </div>
+          </div>
           <!-- Nota sobre la contraseña temporal -->
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p class="text-blue-800">
@@ -162,19 +178,15 @@ watch(() => form.cedula, () => clearError('cedula'));
 
           <!-- Botones de acción -->
           <div class="flex justify-end mt-8 space-x-4">
-            <Link 
-              :href="route('user.index')"
-              class="px-4 py-2.5 border border-gray-300 rounded-lg text-white bg-gray-500 hover:bg-gray-400 transition flex items-center"
-            >
-              <i class="fas fa-times-circle mr-2"></i>
-              Cancelar
+            <Link :href="route('user.index')"
+              class="px-4 py-2.5 border border-gray-300 rounded-lg text-white bg-gray-500 hover:bg-gray-400 transition flex items-center">
+            <i class="fas fa-times-circle mr-2"></i>
+            Cancelar
             </Link>
-            
-            <button 
-              type="submit"
+
+            <button type="submit"
               class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition flex items-center"
-              :disabled="form.processing"
-            >
+              :disabled="form.processing">
               <i v-if="form.processing" class="fas fa-spinner fa-spin mr-2"></i>
               <i v-else class="fas fa-save mr-2"></i>
               {{ form.processing ? 'Creando...' : 'Crear Usuario' }}

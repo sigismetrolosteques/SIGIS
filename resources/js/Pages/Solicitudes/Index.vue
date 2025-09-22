@@ -1,60 +1,98 @@
 <script setup>
+import { ref } from 'vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
-import { ref, onMounted } from 'vue';
 
-const props = defineProps({ solicitudes: Object, flash: Object, auth: Object });
+const props = defineProps({
+  solicitudes: Object,
+  flash: Object,
+  auth: Object
+});
+
+console.log(props.solicitudes.data[0]);
+
 
 const page = usePage();
 const successMessage = ref(page.props.flash?.success || null);
 
 const form = useForm({});
-const showModal = ref(false);
+
+// ---- Modal detalle ----
+const showDetalleModal = ref(false);
+const solicitudDetalle = ref(null);
+
+function openDetalle(solicitud) {
+  solicitudDetalle.value = solicitud;
+  showDetalleModal.value = true;
+}
+
+// ---- Modal confirmación ----
+const showConfirmModal = ref(false);
 const solicitudToUpdate = ref(null);
 const modalAction = ref('');
 
-// Confirmar acción (aprobar/rechazar)
 function confirmAction(solicitud, action) {
   solicitudToUpdate.value = solicitud;
   modalAction.value = action;
-  showModal.value = true;
+  showConfirmModal.value = true;
 }
 
-// Ejecutar acción
 function updateStatus() {
   if (!solicitudToUpdate.value) return;
-
   form.transform(() => ({ status: modalAction.value }))
     .post(route('solicitudes.updateStatus', solicitudToUpdate.value.id), {
       preserveScroll: true,
       onSuccess: () => {
         successMessage.value = `Solicitud ${modalAction.value} correctamente`;
-        showModal.value = false;
-      },
-      onError: () => {
-        showModal.value = false;
+        showConfirmModal.value = false;
       }
     });
 }
 
-onMounted(() => {
-  successMessage.value = page.props.flash?.success || null;
-});
+// Generar PDF (minuta)
+function generatePDF(id) {
+  window.open(route('solicitudes.pdf', id), '_blank');
+}
 </script>
 
 <template>
   <AdminLayout title="Solicitudes">
 
-    <!-- Modal de confirmación -->
-    <Modal :show="showModal" @close="showModal = false">
+    <!-- Modal Detalle -->
+    <Modal :show="showDetalleModal" @close="showDetalleModal=false">
+      <div class="p-6 bg-white rounded">
+        <h2 class="text-xl font-bold mb-4">Detalle Solicitud: {{ solicitudDetalle?.code }}</h2>
+        <div v-if="solicitudDetalle">
+          <p><strong>Producto:</strong> {{ solicitudDetalle.product?.name }}</p>
+          <p><strong>Cantidad:</strong> {{ solicitudDetalle.quantity }}</p>
+          <p><strong>De:</strong> {{ solicitudDetalle.from_gerencia?.name }}</p>
+          <p><strong>Descripción:</strong> {{ solicitudDetalle.description }}</p>
+          <h3 class="mt-4 font-semibold">Historial de estatus:</h3>
+          <ul class="list-disc pl-6">
+            <li v-for="(e, i) in solicitudDetalle.status_history" :key="i">
+              {{ e.status }} - {{ e.justification || 'Sin justificación' }}
+            </li>
+          </ul>
+          <div class="mt-6 flex justify-between">
+            <button @click="generatePDF(solicitudDetalle.id)"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Generar Minuta PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    <!-- Modal Confirmación -->
+    <Modal :show="showConfirmModal" @close="showConfirmModal=false">
       <div class="p-6">
         <h2 class="text-lg font-medium text-gray-900">
           ¿Deseas {{ modalAction }} la solicitud {{ solicitudToUpdate?.code }}?
         </h2>
         <div class="mt-6 flex justify-end space-x-4">
-          <button @click="showModal = false"
+          <button @click="showConfirmModal = false"
                   class="px-4 py-2 text-sm text-white bg-gray-500 hover:bg-gray-400 rounded-md">
             Cancelar
           </button>
@@ -66,32 +104,24 @@ onMounted(() => {
       </div>
     </Modal>
 
-    <!-- Mensaje de éxito -->
+    <!-- Mensaje éxito -->
     <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
       {{ successMessage }}
     </div>
 
-    <!-- Encabezado y botón crear -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Gestión de Solicitudes</h1>
-      <Link :href="route('solicitudes.create')" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-        Nueva Solicitud
-      </Link>
-    </div>
-
-    <!-- Listado de solicitudes -->
-    <div v-if="!solicitudes.data || solicitudes.data.length === 0" class="bg-yellow-100 p-4 rounded">
+    <!-- Tabla solicitudes -->
+    <div v-if="!solicitudes.data || solicitudes.data.length===0" class="bg-yellow-100 p-4 rounded">
       No hay solicitudes registradas.
     </div>
 
     <div v-else class="bg-white shadow rounded-lg border overflow-hidden">
       <table class="w-full">
-        <thead class="bg-gray-100 border-b border-gray-300">
+        <thead class="bg-gray-100 border-b">
           <tr>
             <th class="py-3 px-4">Código</th>
             <th class="py-3 px-4">Producto</th>
+            <th class="py-3 px-4">Cantidad</th>
             <th class="py-3 px-4">De</th>
-            <th class="py-3 px-4">Para</th>
             <th class="py-3 px-4">Estado</th>
             <th class="py-3 px-4">Descripción</th>
             <th class="py-3 px-4 text-center">Acciones</th>
@@ -101,8 +131,8 @@ onMounted(() => {
           <tr v-for="s in solicitudes.data" :key="s.id" class="border-b hover:bg-gray-50">
             <td class="py-3 px-4 font-mono">{{ s.code }}</td>
             <td class="py-3 px-4">{{ s.product?.name }}</td>
+            <td class="py-3 px-4">{{ s.quantity }}</td>
             <td class="py-3 px-4">{{ s.from_gerencia?.name }}</td>
-            <td class="py-3 px-4">{{ s.to_gerencia?.name }}</td>
             <td class="py-3 px-4">
               <span :class="{
                 'px-2 py-1 rounded': true,
@@ -114,6 +144,10 @@ onMounted(() => {
             </td>
             <td class="py-3 px-4">{{ s.description }}</td>
             <td class="py-3 px-4 flex justify-center gap-2">
+              <button @click="openDetalle(s)"
+                      class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                Ver más
+              </button>
               <button
                 v-if="s.status==='pendiente' && auth.user.roles[0]==='super_admin'"
                 @click.prevent="confirmAction(s,'aprobado')"
@@ -135,6 +169,5 @@ onMounted(() => {
     </div>
 
     <Pagination :links="solicitudes.links" class="mt-6" />
-
   </AdminLayout>
 </template>
