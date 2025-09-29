@@ -109,6 +109,12 @@ function generatePDF(id) {
       {{ successMessage }}
     </div>
 
+   <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Gestión de Solicitudes</h1>
+      <Link :href="route('solicitudes.create')" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        Nueva Solicitud
+      </Link>
+    </div>
     <!-- Tabla solicitudes -->
     <div v-if="!solicitudes.data || solicitudes.data.length===0" class="bg-yellow-100 p-4 rounded">
       No hay solicitudes registradas.
