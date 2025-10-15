@@ -96,22 +96,42 @@ function destroyInventory() {
         <td class="py-3 px-4">{{ inv.quantity }}</td>
         <td class="py-3 px-4">{{ inv.location }}</td>
         <td class="py-3 px-4">{{ inv.notes }}</td>
-        <td class="py-3 px-4 text-center flex justify-center gap-2">
-          <!-- Ver más disponible para todos -->
-          <Link :href="route('inventory.show', inv.id)" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-            Ver más
-          </Link>
+        <td class="py-3 px-4 text-center">
+  <div class="flex items-center justify-center gap-1 whitespace-nowrap">
+    <!-- Ver más (todos) -->
+    <Link
+      :href="route('inventory.show', inv.id)"
+      class="inline-flex items-center justify-center h-8 px-3 text-[12px] font-medium
+             rounded-md bg-blue-600 text-white hover:bg-blue-700
+             focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+    >
+      Ver más
+    </Link>
 
-          <!-- Editar y eliminar solo para admins -->
-          <template v-if="$page.props.auth.user.roles.includes('super_admin')">
-            <Link :href="route('inventory.edit', inv.id)" class="bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-600">
-              Editar
-            </Link>
-            <button @click.prevent="confirmDelete(inv.id)" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
-              Eliminar
-            </button>
-          </template>
-        </td>
+    <!-- Editar / Eliminar (solo super_admin) -->
+    <template v-if="$page.props.auth.user.roles.includes('super_admin')">
+      <Link
+        :href="route('inventory.edit', inv.id)"
+        class="inline-flex items-center justify-center h-8 px-3 text-[12px] font-medium
+               rounded-md bg-gray-700 text-white hover:bg-gray-600
+               focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors"
+      >
+        Editar
+      </Link>
+
+      <button
+        @click.prevent="confirmDelete(inv.id)"
+        type="button"
+        class="inline-flex items-center justify-center h-8 px-3 text-[12px] font-medium
+               rounded-md bg-red-500 text-white hover:bg-red-600
+               focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors"
+      >
+        Eliminar
+      </button>
+    </template>
+  </div>
+</td>
+
       </tr>
     </tbody>
   </table>

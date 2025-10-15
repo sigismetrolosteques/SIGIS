@@ -11,6 +11,15 @@
             margin: 0;
             padding: 20px;
         }
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .pdf-header img {
+            width: 100%;
+            max-height: 110px;
+            object-fit: contain;
+        }
         h1 {
             text-align: center;
             font-size: 22px;
@@ -44,6 +53,10 @@
     </style>
 </head>
 <body>
+
+    <div class="pdf-header">
+        <img src="{{ public_path('img/CINTILLO.png') }}" alt="Ministerio del Poder Popular para el Transporte">
+    </div>
 
     <h1>Minuta de Solicitud</h1>
 

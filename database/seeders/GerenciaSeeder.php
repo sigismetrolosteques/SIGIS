@@ -13,21 +13,38 @@ class GerenciaSeeder extends Seeder
         $now = Carbon::now()->toDateTimeString();
 
         $names = [
-            'Gerencia de Administración',
-            'Gerencia de Finanzas',
-            'Gerencia de Tecnología',
-            'Gerencia de Recursos Humanos',
-            'Gerencia de Operaciones',
-            'Gerencia de Ventas',
-            'Gerencia de Compras',
-            'Gerencia de Proyectos',
+            'Administración',
+            'VGO',
+            'Normalización',
+            'Obras Civiles',
+            'Electrificación',
+            'Vías Férreas',
+            'Señalización',
+            'Material Rodante',
+            'Tecnología',
+            'Electromecánica',
         ];
 
-        foreach ($names as $name) {
-            DB::table('gerencias')->updateOrInsert(
-                ['name' => $name],
-                ['created_at' => $now, 'updated_at' => $now]
-            );
+        $existingIds = DB::table('gerencias')
+            ->orderBy('id')
+            ->pluck('id')
+            ->toArray();
+
+        foreach ($names as $index => $name) {
+            if (isset($existingIds[$index])) {
+                DB::table('gerencias')
+                    ->where('id', $existingIds[$index])
+                    ->update([
+                        'name' => $name,
+                        'updated_at' => $now,
+                    ]);
+            } else {
+                DB::table('gerencias')->insert([
+                    'name' => $name,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
         }
     }
 }

@@ -163,7 +163,7 @@ const submit = () => {
       <footer class="py-4 px-6 bg-white border-t border-gray-200/80 text-center text-sm text-gray-500">
         <div class="max-w-7xl mx-auto">
           <img 
-            src="/img/MINISTERIO DEL TRANSPORTE.png" 
+            src="/img/CINTILLO.png" 
             alt="Logo Metro Los Teques" 
             class="mx-auto h-20 w-150"
           >

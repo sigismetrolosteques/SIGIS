@@ -29,7 +29,7 @@ const submit = () => {
     <!-- Encabezado con fondo blanco y logo del ministerio centrado -->
     <header class="bg-white py-4 px-6 flex justify-center items-center border-b border-gray-200 h-32">
       <img 
-        src="/img/MPPTT.png" 
+        src="/img/CINTILLO.png" 
         alt="Ministerio del Transporte" 
         class="h-full w-auto object-contain"
       >

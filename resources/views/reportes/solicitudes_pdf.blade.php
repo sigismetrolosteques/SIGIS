@@ -5,6 +5,8 @@
   <title>Reporte Solicitudes</title>
   <style>
     body { font-family: DejaVu Sans, Arial, sans-serif; color:#111; font-size:12px; }
+    .pdf-header { text-align:center; margin-bottom:18px; }
+    .pdf-header img { width:100%; max-height:110px; object-fit:contain; }
     .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
     .title { font-size:18px; font-weight:700; }
     .summary { display:flex; gap:12px; margin-bottom:12px; }
@@ -16,6 +18,10 @@
   </style>
 </head>
 <body>
+  <div class="pdf-header">
+    <img src="{{ public_path('img/CINTILLO.png') }}" alt="Ministerio del Poder Popular para el Transporte">
+  </div>
+
   <div class="header">
     <div>
       <div class="title">Reporte de Solicitudes</div>
