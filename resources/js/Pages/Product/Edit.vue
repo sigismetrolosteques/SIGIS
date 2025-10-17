@@ -66,6 +66,16 @@ watch(() => form.description, () => clearError('description'));
       <form @submit.prevent="submit" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
+          <!-- Código -->
+          <div>
+            <label class="text-sm font-medium">Código</label>
+            <input
+              :value="props.product.code"
+              class="w-full border rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
+              readonly
+            />
+          </div>
+
           <!-- Nombre -->
           <div>
             <label class="text-sm font-medium">Nombre</label>

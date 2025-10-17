@@ -46,7 +46,7 @@
   <table>
     <thead>
       <tr>
-        <th>Código</th><th>Producto</th><th>De</th><th>A</th><th>Cantidad</th><th>Estado</th><th>Fecha</th>
+        <th>Código</th><th>Producto</th><th>Origen</th><th>Destino</th><th>Cantidad</th><th>Estado</th><th>Fecha</th>
       </tr>
     </thead>
     <tbody>

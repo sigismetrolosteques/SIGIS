@@ -6,6 +6,7 @@ import { ref } from 'vue';
 const props = defineProps({
   user: Object,
   canEditRole: Boolean,
+  canManageGerencia: Boolean,
   roles: Array,
   gerencias: Array, // 👈 lista de gerencias desde el backend
   flash: Object,
@@ -96,8 +97,8 @@ const clearError = (field) => {
           <!-- Gerencia -->
           <div>
             <label class="text-sm font-medium text-gray-700">Coordinación</label>
-            <select v-model="form.gerencia_id"
-              class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+            <select v-model="form.gerencia_id" :disabled="!props.canManageGerencia"
+              :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition', !props.canManageGerencia ? 'bg-gray-100 cursor-not-allowed' : '']">
               <option value="">Seleccione una Coordinación</option>
               <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>

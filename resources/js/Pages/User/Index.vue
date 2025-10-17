@@ -115,8 +115,9 @@ onMounted(() => {
             <td class="py-3 px-4 text-center">
               {{Array.isArray(u.roles) ?
                 u.roles.map(r => {
-                  if (r.name === 'super_admin') return 'Administrador';
+                  if (r.name === 'super_admin') return 'Super Administrador';
                   if (r.name === 'admin') return 'Gestor';
+                  if (r.name === 'viewer') return 'Espectador';
                   return r.name;
                 }).join(', ') : ''}}
             </td>

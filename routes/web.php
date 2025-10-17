@@ -57,6 +57,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
     Route::post('/product/{product}/update', [ProductController::class, 'update'])->name('product.update');
     Route::post('/product/{product}/delete', [ProductController::class, 'destroy'])->name('product.destroy');
+    Route::get('/product/{product}', [ProductController::class, 'show'])->name('product.show');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');

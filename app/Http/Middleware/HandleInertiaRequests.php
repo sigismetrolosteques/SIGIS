@@ -19,7 +19,9 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user(),
+                'user' => optional($request->user(), function ($user) {
+                    return $user->loadMissing(['roles:id,name', 'gerencia:id,name']);
+                }),
             ],
             'errors' => function () use ($request) {
                 return $request->session()->get('errors')

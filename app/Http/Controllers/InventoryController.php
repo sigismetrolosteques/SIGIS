@@ -9,72 +9,119 @@ use Inertia\Inertia;
 
 class InventoryController extends Controller
 {
-   public function index()
-{
-    $inventories = Inventory::with('product')->latest()->paginate(10);
-    return Inertia::render('Inventory/Index', [
-        'inventories' => $inventories 
-    ]);
-}
+    public function index(Request $request)
+    {
+        $search = $request->input('search');
 
+        $inventories = Inventory::with('product')
+            ->when($search, function ($query, $value) {
+                $query->where(function ($sub) use ($value) {
+                    $sub->where('location', 'like', '%' . $value . '%')
+                        ->orWhere('notes', 'like', '%' . $value . '%')
+                        ->orWhereHas('product', function ($productQuery) use ($value) {
+                            $productQuery->where('name', 'like', '%' . $value . '%')
+                                ->orWhere('code', 'like', '%' . $value . '%');
+                        });
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Inventory/Index', [
+            'inventories' => $inventories,
+            'filters' => [
+                'search' => $search,
+            ],
+            'canManage' => $request->user()->hasAnyRole(['super_admin', 'admin']),
+        ]);
+    }
 
     public function create()
     {
-        $products = Product::all();
+        $this->authorizeManagement();
+
         return Inertia::render('Inventory/Create', [
-            'products' => $products
+            'products' => Product::all(),
         ]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $this->authorizeManagement();
+
+        $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0',
             'location' => 'nullable|string|max:255',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
-        Inventory::create($request->all());
+        Inventory::create([
+            'product_id' => $validated['product_id'],
+            'quantity' => $validated['quantity'],
+            'location' => $validated['location'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'reserved_quantity' => 0,
+        ]);
 
         return redirect()->route('inventory.index')->with('success', 'Registro de inventario creado');
     }
 
     public function edit(Inventory $inventory)
     {
-        $products = Product::all();
+        $this->authorizeManagement();
+
         return Inertia::render('Inventory/Edit', [
             'inventory' => $inventory,
-            'products' => $products
+            'products' => Product::all(),
         ]);
     }
 
     public function update(Request $request, Inventory $inventory)
     {
-        $request->validate([
+        $this->authorizeManagement();
+
+        $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0',
             'location' => 'nullable|string|max:255',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
-        $inventory->update($request->all());
+        $inventory->update([
+            'product_id' => $validated['product_id'],
+            'quantity' => $validated['quantity'],
+            'location' => $validated['location'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+        ]);
 
         return redirect()->route('inventory.index')->with('success', 'Registro de inventario actualizado');
     }
 
-    public function show($id)
-{
-    $inventory = Inventory::with('product')->findOrFail($id);
+    public function show($id, Request $request)
+    {
+        $inventory = Inventory::with('product')->findOrFail($id);
 
-    return Inertia::render('Inventory/Show', [
-        'inventory' => $inventory,
-    ]);
-}
-    
+        return Inertia::render('Inventory/Show', [
+            'inventory' => $inventory,
+            'canManage' => $request->user()->hasAnyRole(['super_admin', 'admin']),
+        ]);
+    }
+
     public function destroy(Inventory $inventory)
     {
+        $this->authorizeManagement();
+
         $inventory->delete();
+
         return redirect()->route('inventory.index')->with('success', 'Registro eliminado');
+    }
+
+    protected function authorizeManagement(): void
+    {
+        if (!auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
+            abort(403, 'No tienes permiso para gestionar inventario');
+        }
     }
 }

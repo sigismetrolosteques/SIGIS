@@ -8,14 +8,24 @@ use App\Models\Gerencia;
 
 class UserGerenciaSeeder extends Seeder
 {
+    protected array $adminGerencias = ['Administración', 'VGO', 'Normalización'];
+
     public function run(): void
     {
         $gerencias = Gerencia::all();
 
         // Asigna a cada usuario una gerencia aleatoria
         User::all()->each(function ($user) use ($gerencias) {
-            $user->gerencia_id = $gerencias->random()->id;
+            $randomGerencia = $gerencias->random();
+            $user->gerencia_id = $randomGerencia->id;
             $user->save();
+
+            if ($user->hasRole('super_admin')) {
+                return;
+            }
+
+            $role = in_array($randomGerencia->name, $this->adminGerencias, true) ? 'admin' : 'viewer';
+            $user->syncRoles([$role]);
         });
     }
 }

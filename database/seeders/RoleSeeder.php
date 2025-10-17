@@ -16,6 +16,7 @@ class RoleSeeder extends Seeder
         // Verificar y crear roles si no existen
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']); // Cambiado a snake_case
+        $viewerRole = Role::firstOrCreate(['name' => 'viewer']);
 
         // Crear permisos básicos
         Permission::firstOrCreate(['name' => 'manage_users']);
@@ -24,6 +25,7 @@ class RoleSeeder extends Seeder
         // Asignar permisos a roles
         $superAdminRole->givePermissionTo('manage_users');
         $adminRole->givePermissionTo('edit_own_profile');
+        $viewerRole->givePermissionTo('edit_own_profile');
         
         // Crear usuario super admin si no existe
         $superAdmin = User::firstOrCreate(

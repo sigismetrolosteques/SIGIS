@@ -80,6 +80,9 @@ watch(() => form.description, () => clearError('description'));
   <AdminLayout title="Crear Producto">
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-6">Crear Producto</h1>
+      <p class="mb-4 text-sm text-gray-600">
+        El código del producto se generará automáticamente con el formato <span class="font-mono">PRD-XXXXXXXXXXXX</span>.
+      </p>
 
       <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
         {{ successMessage }}

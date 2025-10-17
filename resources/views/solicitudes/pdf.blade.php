@@ -74,8 +74,16 @@
             <span class="value">{{ $solicitud->quantity }}</span>
         </div>
         <div class="section">
-            <span class="label">De:</span>
+            <span class="label">Fecha:</span>
+            <span class="value">{{ $solicitud->created_at?->format('d/m/Y H:i') }}</span>
+        </div>
+        <div class="section">
+            <span class="label">Origen:</span>
             <span class="value">{{ $solicitud->fromGerencia->name ?? '-' }}</span>
+        </div>
+        <div class="section">
+            <span class="label">Destino:</span>
+            <span class="value">{{ $solicitud->toGerencia->name ?? '-' }}</span>
         </div>
         <div class="section">
             <span class="label">Estado:</span>
@@ -84,6 +92,17 @@
         <div class="section">
             <span class="label">Descripción:</span>
             <span class="value">{{ $solicitud->description ?? '-' }}</span>
+        </div>
+        @php
+            $ultimoLog = $solicitud->statusLogs->last();
+        @endphp
+        <div class="section">
+            <span class="label">Justificación:</span>
+            <span class="value">{{ $ultimoLog?->justification ?? 'Sin justificación' }}</span>
+        </div>
+        <div class="section">
+            <span class="label">Responsable:</span>
+            <span class="value">{{ $ultimoLog?->user->name ?? 'N/A' }}</span>
         </div>
     </div>
 

@@ -12,9 +12,9 @@ use Illuminate\Contracts\Auth\Factory as AuthFactory;
 
 class RouteServiceProvider extends ServiceProvider
 {
-    public const HOME = '/profile'; // Ruta por defecto
-    public const ADMIN_HOME = '/profile'; // Ruta para admin
-    public const SUPER_ADMIN_HOME = '/user'; // Ruta exclusiva para super admin
+    public const HOME = '/solicitudes'; // Ruta por defecto
+    public const ADMIN_HOME = '/solicitudes'; // Ruta para admin
+    public const SUPER_ADMIN_HOME = '/solicitudes'; // Ruta exclusiva para super admin
 
     public function boot(): void
     {
@@ -41,6 +41,10 @@ class RouteServiceProvider extends ServiceProvider
             function ($app) {
                 $auth = $app->make(AuthFactory::class);
                 $user = $auth->guard()->user();
+
+                if (!$user) {
+                    return new \Illuminate\Http\RedirectResponse(url(self::HOME));
+                }
 
                 $redirectTo = match(true) {
                     $user->hasRole('super_admin') => self::SUPER_ADMIN_HOME,

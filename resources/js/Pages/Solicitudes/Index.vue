@@ -1,83 +1,300 @@
 <script setup>
-import { ref } from 'vue';
-import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
+import {
+  EyeIcon,
+  ArrowsRightLeftIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  DocumentArrowDownIcon
+} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   solicitudes: Object,
+  filters: Object,
+  workflow: Object,
   flash: Object,
-  auth: Object
 });
-
-console.log(props.solicitudes.data[0]);
-
 
 const page = usePage();
 const successMessage = ref(page.props.flash?.success || null);
+const errorMessage = ref(page.props.flash?.error || null);
 
-const form = useForm({});
+const filtersForm = ref({
+  search: props.filters?.search ?? '',
+  status: props.filters?.status ?? '',
+  from_date: props.filters?.from_date ?? '',
+  to_date: props.filters?.to_date ?? '',
+});
 
-// ---- Modal detalle ----
+const workflowRole = computed(() => props.workflow?.role ?? 'viewer');
+const statusOptions = computed(() => props.workflow?.status_options ?? {});
+
+const isSuperAdmin = computed(() => workflowRole.value === 'super_admin');
+const isNormalizacion = computed(() => ['super_admin', 'normalizacion'].includes(workflowRole.value));
+const isVgo = computed(() => ['super_admin', 'vgo'].includes(workflowRole.value));
+const isAdministracion = computed(() => ['super_admin', 'administracion'].includes(workflowRole.value));
+const isViewer = computed(() => workflowRole.value === 'viewer');
+const showOriginColumn = computed(() => isSuperAdmin.value || isNormalizacion.value || isAdministracion.value);
+
 const showDetalleModal = ref(false);
-const solicitudDetalle = ref(null);
+const detalleSolicitud = ref(null);
+
+const actionModal = ref({
+  visible: false,
+  solicitud: null,
+  action: '',
+  title: '',
+  description: '',
+});
+
+const actionForm = useForm({
+  action: '',
+  justification: '',
+});
+
+const actionError = ref(null);
+const baseActionClass = 'inline-flex items-center justify-center rounded-full p-2 transition text-xs font-medium';
+
+function formatStatus(status, viewerMask = false) {
+  if (viewerMask && ['vgo', 'administracion'].includes(status)) {
+    return 'En revisión';
+  }
+  return statusOptions.value[status] ?? status;
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('es-VE', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+}
+
+function latestJustification(solicitud) {
+  return solicitud.latest_status_log?.justification ?? 'Sin justificación';
+}
+
+function statusBadgeClass(status) {
+  const base = 'px-2 py-1 rounded text-xs font-semibold';
+  switch (status) {
+    case 'pendiente':
+      return `${base} bg-yellow-100 text-yellow-800`;
+    case 'vgo':
+    case 'administracion':
+      return `${base} bg-blue-100 text-blue-800`;
+    case 'aprobado':
+      return `${base} bg-green-100 text-green-800`;
+    case 'rechazado':
+      return `${base} bg-red-100 text-red-800`;
+    default:
+      return `${base} bg-gray-100 text-gray-800`;
+  }
+}
+
+function applyFilters() {
+  router.get(
+    route('solicitudes.index'),
+    {
+      search: filtersForm.value.search || undefined,
+      status: filtersForm.value.status || undefined,
+      from_date: filtersForm.value.from_date || undefined,
+      to_date: filtersForm.value.to_date || undefined,
+    },
+    { preserveState: true, preserveScroll: true, replace: true }
+  );
+}
+
+function resetFilters() {
+  filtersForm.value = {
+    search: '',
+    status: '',
+    from_date: '',
+    to_date: '',
+  };
+  applyFilters();
+}
 
 function openDetalle(solicitud) {
-  solicitudDetalle.value = solicitud;
+  detalleSolicitud.value = solicitud;
   showDetalleModal.value = true;
 }
 
-// ---- Modal confirmación ----
-const showConfirmModal = ref(false);
-const solicitudToUpdate = ref(null);
-const modalAction = ref('');
+const actionLabels = {
+  transfer_vgo: 'Transferir a VGO',
+  transfer_administracion: 'Transferir a Administración',
+  approve_destination: 'Aprobar',
+  reject_destination: 'Rechazar',
+  approve_final: 'Aprobar (Normalización)',
+  reject_final: 'Rechazar',
+};
 
-function confirmAction(solicitud, action) {
-  solicitudToUpdate.value = solicitud;
-  modalAction.value = action;
-  showConfirmModal.value = true;
+function openActionModal(solicitud, action) {
+  actionModal.value = {
+    visible: true,
+    solicitud,
+    action,
+    title: actionLabels[action] || 'Acción',
+    description: '',
+  };
+  actionForm.action = action;
+  actionForm.justification = '';
+  actionError.value = null;
 }
 
-function updateStatus() {
-  if (!solicitudToUpdate.value) return;
-  form.transform(() => ({ status: modalAction.value }))
-    .post(route('solicitudes.updateStatus', solicitudToUpdate.value.id), {
-      preserveScroll: true,
-      onSuccess: () => {
-        successMessage.value = `Solicitud ${modalAction.value} correctamente`;
-        showConfirmModal.value = false;
-      }
-    });
+function closeActionModal() {
+  actionModal.value.visible = false;
+  actionModal.value.solicitud = null;
+  actionForm.reset();
+  actionError.value = null;
 }
 
-// Generar PDF (minuta)
-function generatePDF(id) {
-  window.open(route('solicitudes.pdf', id), '_blank');
+function submitAction() {
+  if (!actionModal.value.solicitud) return;
+
+  actionForm.post(route('solicitudes.updateStatus', actionModal.value.solicitud.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      successMessage.value = 'Solicitud actualizada correctamente';
+      closeActionModal();
+    },
+    onError: (errors) => {
+      actionError.value = errors?.action || errors?.justification || 'No se pudo completar la acción.';
+    },
+  });
+}
+
+function openPDF(solicitud) {
+  if (!solicitud) return;
+  window.open(route('solicitudes.pdf', solicitud.id), '_blank');
+}
+
+function canTransfer(solicitud) {
+  return isNormalizacion.value && solicitud.status === 'pendiente';
+}
+
+function canApproveDestination(solicitud) {
+  if (!['vgo', 'administracion'].includes(solicitud.status)) return false;
+  if (solicitud.destination_decision) return false;
+
+  if (isSuperAdmin.value) return true;
+  if (isVgo.value && solicitud.status === 'vgo') return true;
+  if (isAdministracion.value && solicitud.status === 'administracion') return true;
+  return false;
+}
+
+function canRejectDestination(solicitud) {
+  return canApproveDestination(solicitud);
+}
+
+function canFinalizeApproval(solicitud) {
+  return (
+    (isNormalizacion.value || isSuperAdmin.value) &&
+    ['vgo', 'administracion'].includes(solicitud.status) &&
+    solicitud.destination_decision === 'aprobado'
+  );
+}
+
+function canFinalizeRejection(solicitud) {
+  return (
+    (isNormalizacion.value || isSuperAdmin.value) &&
+    ['pendiente', 'vgo', 'administracion'].includes(solicitud.status)
+  );
+}
+
+function timelineLabel(action) {
+  switch (action) {
+    case 'created':
+      return 'Solicitud creada';
+    case 'transferred':
+      return 'Transferencia';
+    case 'destination_approved':
+      return 'Aprobación de gerencia';
+    case 'destination_rejected':
+      return 'Rechazo de gerencia';
+    case 'final_approved':
+      return 'Aprobación final';
+    case 'final_rejected':
+      return 'Rechazo final';
+    default:
+      return action;
+  }
 }
 </script>
 
 <template>
   <AdminLayout title="Solicitudes">
+    <Modal :show="showDetalleModal" @close="showDetalleModal = false">
+      <div class="p-6 bg-white rounded-lg max-w-3xl">
+        <h2 class="text-xl font-bold mb-4">Detalle de la solicitud</h2>
+        <div v-if="detalleSolicitud">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <p class="text-sm text-gray-500">Código</p>
+              <p class="font-mono font-semibold text-gray-800">{{ detalleSolicitud.code }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Fecha</p>
+              <p class="text-gray-800">{{ formatDate(detalleSolicitud.created_at) }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Producto</p>
+              <p class="text-gray-800">{{ detalleSolicitud.product?.name }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Cantidad</p>
+              <p class="text-gray-800">{{ detalleSolicitud.quantity }}</p>
+            </div>
+            <div v-if="!isViewer">
+              <p class="text-sm text-gray-500">Origen</p>
+              <p class="text-gray-800">{{ detalleSolicitud.from_gerencia?.name ?? 'Sin gerencia' }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Destino</p>
+              <p class="text-gray-800">{{ detalleSolicitud.to_gerencia?.name ?? 'Sin gerencia' }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <p class="text-sm text-gray-500">Descripción</p>
+              <p class="text-gray-800 whitespace-pre-line">{{ detalleSolicitud.description || 'Sin descripción' }}</p>
+            </div>
+          </div>
 
-    <!-- Modal Detalle -->
-    <Modal :show="showDetalleModal" @close="showDetalleModal=false">
-      <div class="p-6 bg-white rounded">
-        <h2 class="text-xl font-bold mb-4">Detalle Solicitud: {{ solicitudDetalle?.code }}</h2>
-        <div v-if="solicitudDetalle">
-          <p><strong>Producto:</strong> {{ solicitudDetalle.product?.name }}</p>
-          <p><strong>Cantidad:</strong> {{ solicitudDetalle.quantity }}</p>
-          <p><strong>De:</strong> {{ solicitudDetalle.from_gerencia?.name }}</p>
-          <p><strong>Descripción:</strong> {{ solicitudDetalle.description }}</p>
-          <h3 class="mt-4 font-semibold">Historial de estatus:</h3>
-          <ul class="list-disc pl-6">
-            <li v-for="(e, i) in solicitudDetalle.status_history" :key="i">
-              {{ e.status }} - {{ e.justification || 'Sin justificación' }}
+          <h3 class="text-lg font-semibold mb-3">Historial de estatus</h3>
+          <ul class="space-y-3 max-h-64 overflow-y-auto pr-2">
+            <li
+              v-for="log in detalleSolicitud.status_logs"
+              :key="log.id"
+              class="border border-gray-200 rounded-lg p-3 bg-gray-50"
+            >
+              <div class="flex flex-wrap justify-between text-sm text-gray-600 mb-1">
+                <span class="font-semibold">{{ timelineLabel(log.action) }}</span>
+                <span>{{ formatDate(log.created_at) }}</span>
+              </div>
+              <div class="text-sm text-gray-700">
+                <p>
+                  <span class="font-semibold">Estatus:</span>
+                  {{ formatStatus(log.status) }}
+                </p>
+                <p>
+                  <span class="font-semibold">Responsable:</span>
+                  {{ log.user?.name ?? 'Sistema' }}
+                </p>
+                <p>
+                  <span class="font-semibold">Justificación:</span>
+                  {{ log.justification || 'Sin justificación' }}
+                </p>
+              </div>
             </li>
           </ul>
-          <div class="mt-6 flex justify-between">
-            <button @click="generatePDF(solicitudDetalle.id)"
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+
+          <div class="mt-6 flex justify-end">
+            <button
+              type="button"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              @click="openPDF(detalleSolicitud)"
+            >
               Generar Minuta PDF
             </button>
           </div>
@@ -85,89 +302,226 @@ function generatePDF(id) {
       </div>
     </Modal>
 
-    <!-- Modal Confirmación -->
-    <Modal :show="showConfirmModal" @close="showConfirmModal=false">
+    <Modal :show="actionModal.visible" @close="closeActionModal">
       <div class="p-6">
-        <h2 class="text-lg font-medium text-gray-900">
-          ¿Deseas {{ modalAction }} la solicitud {{ solicitudToUpdate?.code }}?
-        </h2>
-        <div class="mt-6 flex justify-end space-x-4">
-          <button @click="showConfirmModal = false"
-                  class="px-4 py-2 text-sm text-white bg-gray-500 hover:bg-gray-400 rounded-md">
-            Cancelar
-          </button>
-          <button @click="updateStatus"
-                  class="px-4 py-2 text-sm text-white bg-green-600 hover:bg-green-700 rounded-md">
-            Confirmar
-          </button>
+        <h2 class="text-lg font-semibold text-gray-900">{{ actionModal.title }}</h2>
+        <p class="text-sm text-gray-600 mb-4">
+          Ingresa la justificación para continuar con la acción seleccionada.
+        </p>
+        <div v-if="actionError" class="mb-3 p-3 bg-red-100 text-red-700 rounded">
+          {{ actionError }}
         </div>
+        <form @submit.prevent="submitAction" class="space-y-4">
+          <div>
+            <label class="text-sm font-medium text-gray-700">Justificación</label>
+            <textarea
+              v-model="actionForm.justification"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows="3"
+              placeholder="Describe la razón de la acción"
+              required
+            ></textarea>
+          </div>
+          <div class="flex justify-end gap-3 flex-wrap">
+            <button
+              type="button"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+              :disabled="!actionModal.solicitud"
+              @click="openPDF(actionModal.solicitud)"
+            >
+              Generar Minuta PDF
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              @click="closeActionModal"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              :disabled="actionForm.processing"
+            >
+              {{ actionForm.processing ? 'Guardando...' : 'Confirmar' }}
+            </button>
+          </div>
+        </form>
       </div>
     </Modal>
 
-    <!-- Mensaje éxito -->
     <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
       {{ successMessage }}
     </div>
+    <div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
+      {{ errorMessage }}
+    </div>
 
-   <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Gestión de Solicitudes</h1>
-      <Link :href="route('solicitudes.create')" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
+      <form @submit.prevent="applyFilters" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="md:col-span-2">
+          <label class="text-sm font-medium text-gray-600">Buscar</label>
+          <input
+            v-model="filtersForm.search"
+            type="text"
+            placeholder="Código o producto"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-600">Estado</label>
+          <select
+            v-model="filtersForm.status"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="">Todos</option>
+            <option v-for="(label, value) in statusOptions" :key="value" :value="value">
+              {{ label }}
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-600">Desde</label>
+          <input
+            v-model="filtersForm.from_date"
+            type="date"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-600">Hasta</label>
+          <input
+            v-model="filtersForm.to_date"
+            type="date"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
+        <div class="flex items-end gap-2">
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+            Filtrar
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            @click="resetFilters"
+          >
+            Limpiar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">Gestión de Solicitudes</h1>
+      <Link
+        :href="route('solicitudes.create')"
+        class="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+      >
         Nueva Solicitud
       </Link>
     </div>
-    <!-- Tabla solicitudes -->
-    <div v-if="!solicitudes.data || solicitudes.data.length===0" class="bg-yellow-100 p-4 rounded">
+
+    <div v-if="!solicitudes.data || solicitudes.data.length === 0" class="bg-yellow-100 p-4 rounded border border-yellow-200">
       No hay solicitudes registradas.
     </div>
 
-    <div v-else class="bg-white shadow rounded-lg border overflow-hidden">
+    <div v-else class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <table class="w-full">
-        <thead class="bg-gray-100 border-b">
+        <thead class="bg-gray-100 text-gray-700">
           <tr>
-            <th class="py-3 px-4">Código</th>
-            <th class="py-3 px-4">Producto</th>
-            <th class="py-3 px-4">Cantidad</th>
-            <th class="py-3 px-4">De</th>
-            <th class="py-3 px-4">Estado</th>
-            <th class="py-3 px-4">Descripción</th>
-            <th class="py-3 px-4 text-center">Acciones</th>
+            <th class="py-3 px-4 text-left">Acciones</th>
+            <th class="py-3 px-4 text-left">Código</th>
+            <th class="py-3 px-4 text-left">Producto</th>
+            <th class="py-3 px-4 text-left">Cantidad</th>
+            <th class="py-3 px-4 text-left">Fecha</th>
+            <th v-if="showOriginColumn" class="py-3 px-4 text-left">Origen</th>
+            <th class="py-3 px-4 text-left">Destino</th>
+            <th class="py-3 px-4 text-left">Estado</th>
+            <th class="py-3 px-4 text-left">Justificación</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in solicitudes.data" :key="s.id" class="border-b hover:bg-gray-50">
-            <td class="py-3 px-4 font-mono">{{ s.code }}</td>
-            <td class="py-3 px-4">{{ s.product?.name }}</td>
-            <td class="py-3 px-4">{{ s.quantity }}</td>
-            <td class="py-3 px-4">{{ s.from_gerencia?.name }}</td>
+          <tr
+            v-for="solicitud in solicitudes.data"
+            :key="solicitud.id"
+            class="border-b border-gray-200 hover:bg-gray-50 transition"
+          >
             <td class="py-3 px-4">
-              <span :class="{
-                'px-2 py-1 rounded': true,
-                'bg-yellow-200 text-yellow-800': s.status==='pendiente',
-                'bg-green-200 text-green-800': s.status==='aprobado',
-                'bg-red-200 text-red-800': s.status==='rechazado'
-              }">{{ s.status }}
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  :class="[baseActionClass, 'bg-blue-100 text-blue-600 hover:bg-blue-200']"
+                  @click="openDetalle(solicitud)"
+                  title="Ver detalle"
+                >
+                  <EyeIcon class="w-4 h-4" />
+                </button>
+                <template v-if="canTransfer(solicitud)">
+                  <button
+                    :class="[baseActionClass, 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200']"
+                    @click="openActionModal(solicitud, 'transfer_vgo')"
+                    title="Transferir a VGO"
+                  >
+                    <ArrowsRightLeftIcon class="w-4 h-4" />
+                  </button>
+                  <button
+                    :class="[baseActionClass, 'bg-purple-100 text-purple-600 hover:bg-purple-200']"
+                    @click="openActionModal(solicitud, 'transfer_administracion')"
+                    title="Transferir a Administración"
+                  >
+                    <ArrowsRightLeftIcon class="w-4 h-4" />
+                  </button>
+                </template>
+                <template v-if="canApproveDestination(solicitud)">
+                  <button
+                    :class="[baseActionClass, 'bg-green-100 text-green-600 hover:bg-green-200']"
+                    @click="openActionModal(solicitud, 'approve_destination')"
+                    title="Aprobar"
+                  >
+                    <CheckCircleIcon class="w-4 h-4" />
+                  </button>
+                  <button
+                    :class="[baseActionClass, 'bg-red-100 text-red-600 hover:bg-red-200']"
+                    @click="openActionModal(solicitud, 'reject_destination')"
+                    title="Rechazar"
+                  >
+                    <XCircleIcon class="w-4 h-4" />
+                  </button>
+                </template>
+                <template v-if="canFinalizeApproval(solicitud)">
+                  <button
+                    :class="[baseActionClass, 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200']"
+                    @click="openActionModal(solicitud, 'approve_final')"
+                    title="Aprobación final"
+                  >
+                    <CheckCircleIcon class="w-4 h-4" />
+                  </button>
+                </template>
+                <template v-if="canFinalizeRejection(solicitud)">
+                  <button
+                    :class="[baseActionClass, 'bg-rose-100 text-rose-600 hover:bg-rose-200']"
+                    @click="openActionModal(solicitud, 'reject_final')"
+                    title="Rechazar"
+                  >
+                    <XCircleIcon class="w-4 h-4" />
+                  </button>
+                </template>
+              </div>
+            </td>
+            <td class="py-3 px-4 font-mono text-sm text-gray-700">{{ solicitud.code }}</td>
+            <td class="py-3 px-4 text-gray-800">{{ solicitud.product?.name }}</td>
+            <td class="py-3 px-4 text-gray-700">{{ solicitud.quantity }}</td>
+            <td class="py-3 px-4 text-gray-700">{{ formatDate(solicitud.created_at) }}</td>
+            <td v-if="showOriginColumn" class="py-3 px-4 text-gray-700">
+              {{ solicitud.from_gerencia?.name ?? 'Sin gerencia' }}
+            </td>
+            <td class="py-3 px-4 text-gray-700">{{ solicitud.to_gerencia?.name ?? 'Sin gerencia' }}</td>
+            <td class="py-3 px-4">
+              <span :class="statusBadgeClass(solicitud.status)">
+                {{ formatStatus(solicitud.status, isViewer.value) }}
               </span>
             </td>
-            <td class="py-3 px-4">{{ s.description }}</td>
-            <td class="py-3 px-4 flex justify-center gap-2">
-              <button @click="openDetalle(s)"
-                      class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
-                Ver más
-              </button>
-              <button
-                v-if="s.status==='pendiente' && auth.user.roles[0]==='super_admin'"
-                @click.prevent="confirmAction(s,'aprobado')"
-                class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition"
-              >
-                Aprobar
-              </button>
-              <button
-                v-if="s.status==='pendiente' && auth.user.roles[0]==='super_admin'"
-                @click.prevent="confirmAction(s,'rechazado')"
-                class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-              >
-                Rechazar
-              </button>
+            <td class="py-3 px-4 text-gray-700">
+              {{ latestJustification(solicitud) }}
             </td>
           </tr>
         </tbody>

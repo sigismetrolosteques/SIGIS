@@ -8,57 +8,62 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
 use App\Services\RoleService;
 use App\Mail\WelcomeUserMail;
 
 class UserController extends Controller
 {
-   public function index()
-{
-    $authUser = Auth::user();
+    protected array $adminGerencias = ['Administración', 'VGO', 'Normalización'];
 
-    $isSuperAdmin = DB::table('model_has_roles')
-        ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-        ->where('model_has_roles.model_id', $authUser->id)
-        ->where('roles.name', 'super_admin')
-        ->exists();
+    public function index()
+    {
+        $authUser = Auth::user();
 
-    if ($isSuperAdmin) {
-        $users = User::with(['roles:id,name', 'gerencia:id,name'])
-            ->latest()
-            ->paginate(10);
-    } else {
-        $users = User::where('id', $authUser->id)
-            ->with(['roles:id,name', 'gerencia:id,nombre'])
-            ->paginate(1);
+        $isSuperAdmin = $authUser->hasRole('super_admin');
+        $isAdmin = $authUser->hasRole('admin');
+
+        if ($isSuperAdmin) {
+            $users = User::with(['roles:id,name', 'gerencia:id,name'])
+                ->latest()
+                ->paginate(10);
+        } elseif ($isAdmin) {
+            $users = User::with(['roles:id,name', 'gerencia:id,name'])
+                ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
+                ->latest()
+                ->paginate(10);
+        } else {
+            $users = User::with(['roles:id,name', 'gerencia:id,name'])
+                ->where('id', $authUser->id)
+                ->paginate(1);
+        }
+
+        return Inertia::render('User/Index', [
+            'users' => $users,
+            'can' => [
+                'create' => $isSuperAdmin || $isAdmin,
+                'edit' => $isSuperAdmin || $isAdmin,
+                'delete' => $isSuperAdmin || $isAdmin,
+            ],
+            'is_super_admin' => $isSuperAdmin
+        ]);
     }
-
-    return Inertia::render('User/Index', [
-        'users' => $users,
-        'can' => [
-            'create' => $isSuperAdmin,
-            'edit' => true,
-            'delete' => $isSuperAdmin,
-        ],
-        'is_super_admin' => $isSuperAdmin
-    ]);
-}
 
     public function create()
     {
+        $this->authorizeUserManagement();
+
         return Inertia::render('User/Create', [
-            'roles' => Role::select('id', 'name')->get(),
             'gerencias' => Gerencia::all(),
         ]);
     }
 
     public function store(Request $request)
     {
+        $this->authorizeUserManagement();
+
         $request->validate([
             'name'        => 'required|string|max:255',
             'email'       => 'required|email|unique:users',
@@ -66,6 +71,7 @@ class UserController extends Controller
             'gerencia_id' => 'required|exists:gerencias,id',
         ]);
 
+        $gerencia = Gerencia::findOrFail($request->gerencia_id);
         $tempPassword = Str::random(8);
 
         $user = User::create([
@@ -83,7 +89,7 @@ class UserController extends Controller
             'security_answer_3'   => null,
         ]);
 
-        $user->assignRole('admin');
+        $user->assignRole($this->resolveRoleForGerencia($gerencia->name));
 
         // Enviar correo de bienvenida
         try {
@@ -101,45 +107,62 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        if (!auth()->user()->hasRole('super_admin') && auth()->id() != $user->id) {
+        $auth = auth()->user();
+
+        if ($user->hasRole('super_admin') && !$auth->hasRole('super_admin')) {
+            abort(403, 'No tienes permiso para editar este usuario');
+        }
+
+        if (!$auth->hasAnyRole(['super_admin', 'admin']) && $auth->id != $user->id) {
             abort(403, 'No tienes permiso para editar este usuario');
         }
 
         return Inertia::render('User/Edit', [
-            'user' => $user->load('roles:id,name', 'gerencia:id,nombre'),
+            'user' => $user->load('roles:id,name', 'gerencia:id,name'),
             'roles' => auth()->user()->hasRole('super_admin')
                 ? app(RoleService::class)->getRoles()
                 : null,
             'gerencias' => Gerencia::all(),
             'canEditRole' => auth()->user()->hasRole('super_admin'),
+            'canManageGerencia' => auth()->user()->hasAnyRole(['super_admin', 'admin']),
         ]);
     }
 
     public function update(Request $request, User $user)
     {
-        if (!auth()->user()->hasRole('super_admin') && auth()->id() != $user->id) {
+        $auth = auth()->user();
+
+        if ($user->hasRole('super_admin') && !$auth->hasRole('super_admin')) {
+            return back()->withErrors(['general' => 'No tienes permiso para actualizar este usuario']);
+        }
+
+        if (!$auth->hasAnyRole(['super_admin', 'admin']) && $auth->id != $user->id) {
             return back()->withErrors(['general' => 'No tienes permiso para actualizar este usuario']);
         }
 
         try {
+            $isManager = $auth->hasAnyRole(['super_admin', 'admin']);
+
             $validated = $request->validate([
                 'name'        => 'required|string|max:255',
                 'email'       => 'required|email|unique:users,email,' . $user->id,
                 'cedula'      => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users,cedula,' . $user->id,
-                'gerencia_id' => 'required|exists:gerencias,id',
-                'role'        => 'nullable|exists:roles,id',
+                'gerencia_id' => $isManager ? 'required|exists:gerencias,id' : 'nullable',
             ]);
 
-            if (auth()->user()->hasRole('super_admin') && isset($validated['role'])) {
-                $user->syncRoles([$validated['role']]);
-            }
+            $gerenciaId = $isManager ? $validated['gerencia_id'] : $user->gerencia_id;
+            $gerencia = Gerencia::findOrFail($gerenciaId);
 
             $user->update([
                 'name'        => $validated['name'],
                 'email'       => $validated['email'],
                 'cedula'      => $validated['cedula'],
-                'gerencia_id' => $validated['gerencia_id'],
+                'gerencia_id' => $gerenciaId,
             ]);
+
+            if (!$user->hasRole('super_admin')) {
+                $user->syncRoles([$this->resolveRoleForGerencia($gerencia->name)]);
+            }
 
             return redirect()->route('user.index')->with('success', 'Usuario actualizado correctamente');
         } catch (\Exception $e) {
@@ -150,7 +173,33 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $auth = auth()->user();
+
+        if (!$auth->hasAnyRole(['super_admin', 'admin'])) {
+            abort(403, 'No tienes permiso para eliminar usuarios');
+        }
+
+        if ($user->hasRole('super_admin')) {
+            abort(403, 'No es posible eliminar al Super Administrador');
+        }
+
+        if ($auth->id === $user->id) {
+            abort(403, 'No puedes eliminar tu propio usuario');
+        }
+
         $user->delete();
         return redirect()->route('user.index')->with('success', 'Usuario eliminado correctamente');
+    }
+
+    protected function resolveRoleForGerencia(string $gerenciaName): string
+    {
+        return in_array($gerenciaName, $this->adminGerencias, true) ? 'admin' : 'viewer';
+    }
+
+    protected function authorizeUserManagement(): void
+    {
+        if (!Auth::user()->hasAnyRole(['super_admin', 'admin'])) {
+            abort(403, 'No tienes permiso para gestionar usuarios');
+        }
     }
 }

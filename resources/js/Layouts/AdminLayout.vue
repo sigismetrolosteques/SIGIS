@@ -1,10 +1,13 @@
 <script setup>
 import { ref, computed } from "vue";
-import { Link, router } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 
 const props = defineProps({
   auth: Object,
 });
+
+const page = usePage();
+const authUser = computed(() => props.auth?.user ?? page.props.auth?.user ?? null);
 
 const sidebarOpen = ref(false);
 
@@ -22,6 +25,45 @@ const logout = () => {
     }
   );
 };
+
+const userRoles = computed(() => {
+  const roles = authUser.value?.roles ?? [];
+  return roles
+    .map(role => (typeof role === 'string' ? role : role?.name))
+    .filter(Boolean);
+});
+
+const hasRole = role => userRoles.value.includes(role);
+const isSuperAdmin = computed(() => hasRole('super_admin'));
+const isAdmin = computed(() => hasRole('admin'));
+const isViewer = computed(() => !isSuperAdmin.value && !isAdmin.value && hasRole('viewer'));
+
+const displayUserName = computed(() => authUser.value?.name ?? 'Usuario');
+
+const canAccess = roles => {
+  if (!Array.isArray(roles) || roles.length === 0) return true;
+  if (roles.includes('super_admin') && isSuperAdmin.value) return true;
+  if (roles.includes('admin') && (isAdmin.value || isSuperAdmin.value)) return true;
+  if (roles.includes('viewer') && (isViewer.value || isAdmin.value || isSuperAdmin.value)) return true;
+  return false;
+};
+
+const menuItems = computed(() => [
+  { href: '/user', label: 'Gestión de Usuarios', roles: ['super_admin'], icon: 'users' },
+  { href: '/product', label: 'Gestión de Productos', roles: ['super_admin', 'admin', 'viewer'], icon: 'cube' },
+  { href: '/inventory', label: 'Gestión de Inventario', roles: ['super_admin', 'admin', 'viewer'], icon: 'archive' },
+  { href: '/solicitudes', label: 'Gestión de Solicitudes', roles: ['super_admin', 'admin', 'viewer'], icon: 'inbox' },
+  { href: '/reportes/solicitudes', label: 'Gestión de Reportes', roles: ['super_admin', 'admin', 'viewer'], icon: 'chart' },
+  { href: '/auditoria', label: 'Auditoría', roles: ['super_admin'], icon: 'clipboard' },
+  { href: '/profile', label: 'Perfil', roles: ['super_admin', 'admin', 'viewer'], icon: 'user' },
+]);
+
+const displayRoleLabel = computed(() => {
+  if (isSuperAdmin.value) return 'Super Administrador';
+  if (isAdmin.value) return 'Gestor';
+  if (isViewer.value) return 'Espectador';
+  return 'Usuario';
+});
 
 const mainClasses = computed(() => [
   "flex flex-col flex-1 min-h-screen transition-all duration-300 ease-in-out",
@@ -47,112 +89,53 @@ const mainClasses = computed(() => [
       </div>
 
       <!-- Menu -->
-      <nav class="mt-8 px-4 space-y-2">
-        <Link
-          v-for="item in [
-            { href: '/user', label: 'Gestión de Usuarios', role: 'super_admin', icon: 'users' },
-            { href: '/product', label: 'Gestión de Productos', role: 'admin', icon: 'cube' },
-            { href: '/inventory', label: 'Gestión de Inventario', role: 'admin', icon: 'archive' },
-            { href: '/solicitudes', label: 'Gestión de Solicitudes', role: 'admin', icon: 'inbox' },
-            { href: '/reportes/solicitudes', label: 'Gestión de Reportes', role: 'admin', icon: 'chart' },
-            { href: '/auditoria', label: 'Auditoría', role: 'super_admin', icon: 'clipboard' },
-            { href: '/profile', label: 'Perfil', role: 'admin', icon: 'user' },
-          ]"
-          :key="item.href"
-          v-if="
-            $page.props.auth.user.roles.includes('super_admin') ||
-            (item.role === 'admin' &&
-              ['admin', 'super_admin'].includes($page.props.auth.user.roles[0]))
-          "
-          :href="item.href"
-          class="menu-item"
-          :class="$page.url.startsWith(item.href) ? 'menu-active' : 'menu-inactive'"
-        >
-          <!-- ÍCONOS MODERNOS -->
-          <svg
-            v-if="item.icon === 'users'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5 5 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
+<nav class="mt-8 px-4 space-y-2">
+  <template v-for="item in menuItems" :key="item.href">
+    <Link
+      v-if="canAccess(item.roles)"
+      :href="item.href"
+      class="menu-item"
+      :class="$page.url.startsWith(item.href) ? 'menu-active' : 'menu-inactive'"
+    >
+      <svg v-if="item.icon === 'users'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5 5 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'cube'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M20 12V6a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4" />
-          </svg>
+      <svg v-else-if="item.icon === 'cube'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M20 12V6a2 2 0 00-2-2H6a2 2 0 00-2 2v6m16 0v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6m16 0H4" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'archive'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M3 7h18M5 7v13h14V7M9 11h6" />
-          </svg>
+      <svg v-else-if="item.icon === 'archive'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M5 7v13h14V7M9 11h6" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'inbox'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6l3 4h10l3-4z" />
-          </svg>
+      <svg v-else-if="item.icon === 'inbox'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M20 13V7a2 2 0 00-2-2H6a2 2 0 00-2 2v6l3 4h10l3-4z" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'chart'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 19h16M7 10h3v9H7zM14 5h3v14h-3z" />
-          </svg>
+      <svg v-else-if="item.icon === 'chart'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 19h16M7 10h3v9H7zM14 5h3v14h-3z" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'clipboard'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 2h6a2 2 0 012 2v1h1a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h1V4a2 2 0 012-2z" />
-          </svg>
+      <svg v-else-if="item.icon === 'clipboard'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 2h6a2 2 0 012 2v1h1a2 2 0 012 2v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h1V4a2 2 0 012-2z" />
+      </svg>
 
-          <svg
-            v-else-if="item.icon === 'user'"
-            class="w-5 h-5 mr-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
+      <svg v-else-if="item.icon === 'user'" class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
 
-          <span class="font-medium truncate">{{ item.label }}</span>
-        </Link>
-      </nav>
+      <span class="font-medium truncate">{{ item.label }}</span>
+    </Link>
+  </template>
+</nav>
+
 
       <div class="mt-auto px-4 py-5">
         <div class="rounded-lg p-3 flex items-center justify-center">
@@ -183,16 +166,8 @@ const mainClasses = computed(() => [
           </button>
 
           <div class="ml-4 flex items-center space-x-2 bg-red-100 px-3 py-1.5 rounded-lg">
-            <span class="text-gray-800 font-semibold">Hola, {{ $page.props.auth.user.name }}</span>
-            <span class="text-sm text-gray-600">
-              {{
-                $page.props.auth.user.roles[0] === "super_admin"
-                  ? "Administrador"
-                  : $page.props.auth.user.roles[0] === "admin"
-                  ? "Gestor"
-                  : $page.props.auth.user.roles[0]
-              }}
-            </span>
+            <span class="text-gray-800 font-semibold">Hola, {{ displayUserName }}</span>
+            <span class="text-sm text-gray-600">{{ displayRoleLabel }}</span>
           </div>
         </div>
 
