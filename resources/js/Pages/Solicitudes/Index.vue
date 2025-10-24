@@ -57,7 +57,8 @@ const actionForm = useForm({
 });
 
 const actionError = ref(null);
-const baseActionClass = 'inline-flex items-center justify-center rounded-full p-2 transition text-xs font-medium';
+const baseActionClass = 'inline-flex h-10 w-10 items-center justify-center rounded-full transition text-xs font-medium';
+const finalStatuses = ['aprobado', 'rechazado'];
 
 function formatStatus(status, viewerMask = false) {
   if (viewerMask && ['vgo', 'administracion'].includes(status)) {
@@ -70,7 +71,12 @@ function formatDate(dateString) {
   if (!dateString) return '-';
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('es-VE', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
 function latestJustification(solicitud) {
@@ -171,8 +177,24 @@ function openPDF(solicitud) {
   window.open(route('solicitudes.pdf', solicitud.id), '_blank');
 }
 
-function canTransfer(solicitud) {
-  return isNormalizacion.value && solicitud.status === 'pendiente';
+function canTransferToVgo(solicitud) {
+  if (!solicitud) return false;
+  if (finalStatuses.includes(solicitud.status)) return false;
+  if (solicitud.status === 'vgo') return false;
+  if (isSuperAdmin.value) return true;
+  if (isNormalizacion.value) return solicitud.status === 'pendiente';
+  if (isAdministracion.value) return solicitud.status === 'administracion';
+  return false;
+}
+
+function canTransferToAdministracion(solicitud) {
+  if (!solicitud) return false;
+  if (finalStatuses.includes(solicitud.status)) return false;
+  if (solicitud.status === 'administracion') return false;
+  if (isSuperAdmin.value) return true;
+  if (isNormalizacion.value) return solicitud.status === 'pendiente';
+  if (isVgo.value) return solicitud.status === 'vgo';
+  return false;
 }
 
 function canApproveDestination(solicitud) {
@@ -425,108 +447,164 @@ function timelineLabel(action) {
       No hay solicitudes registradas.
     </div>
 
-    <div v-else class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-100 text-gray-700">
-          <tr>
-            <th class="py-3 px-4 text-left">Acciones</th>
-            <th class="py-3 px-4 text-left">Código</th>
-            <th class="py-3 px-4 text-left">Producto</th>
-            <th class="py-3 px-4 text-left">Cantidad</th>
-            <th class="py-3 px-4 text-left">Fecha</th>
-            <th v-if="showOriginColumn" class="py-3 px-4 text-left">Origen</th>
-            <th class="py-3 px-4 text-left">Destino</th>
-            <th class="py-3 px-4 text-left">Estado</th>
-            <th class="py-3 px-4 text-left">Justificación</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="solicitud in solicitudes.data"
-            :key="solicitud.id"
-            class="border-b border-gray-200 hover:bg-gray-50 transition"
-          >
-            <td class="py-3 px-4">
-              <div class="flex flex-wrap items-center gap-2">
-                <button
-                  :class="[baseActionClass, 'bg-blue-100 text-blue-600 hover:bg-blue-200']"
-                  @click="openDetalle(solicitud)"
-                  title="Ver detalle"
-                >
-                  <EyeIcon class="w-4 h-4" />
-                </button>
-                <template v-if="canTransfer(solicitud)">
+    <div
+      v-else
+      class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col"
+    >
+      <div class="relative max-h-[60vh] overflow-auto">
+        <table class="min-w-[960px] divide-y divide-gray-200 text-sm text-gray-700">
+          <thead class="bg-gray-100 text-gray-700 sticky top-0 z-10">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-48">
+                Acciones
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-32">
+                Código
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Producto
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-28">
+                Cantidad
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-48">
+                Fecha
+              </th>
+              <th
+                v-if="showOriginColumn"
+                class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+              >
+                Origen
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Destino
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-32">
+                Estado
+              </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                Justificación
+              </th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-gray-100 bg-white">
+            <tr
+              v-for="solicitud in solicitudes.data"
+              :key="solicitud.id"
+              class="hover:bg-gray-50 transition"
+            >
+              <td class="px-4 py-3 align-top">
+                <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
                   <button
-                    :class="[baseActionClass, 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200']"
-                    @click="openActionModal(solicitud, 'transfer_vgo')"
-                    title="Transferir a VGO"
+                    :class="[baseActionClass, 'bg-blue-100 text-blue-600 hover:bg-blue-200']"
+                    @click="openDetalle(solicitud)"
+                    title="Ver detalle"
                   >
-                    <ArrowsRightLeftIcon class="w-4 h-4" />
+                    <EyeIcon class="w-4 h-4" />
                   </button>
-                  <button
-                    :class="[baseActionClass, 'bg-purple-100 text-purple-600 hover:bg-purple-200']"
-                    @click="openActionModal(solicitud, 'transfer_administracion')"
-                    title="Transferir a Administración"
-                  >
-                    <ArrowsRightLeftIcon class="w-4 h-4" />
-                  </button>
-                </template>
-                <template v-if="canApproveDestination(solicitud)">
-                  <button
-                    :class="[baseActionClass, 'bg-green-100 text-green-600 hover:bg-green-200']"
-                    @click="openActionModal(solicitud, 'approve_destination')"
-                    title="Aprobar"
-                  >
-                    <CheckCircleIcon class="w-4 h-4" />
-                  </button>
-                  <button
-                    :class="[baseActionClass, 'bg-red-100 text-red-600 hover:bg-red-200']"
-                    @click="openActionModal(solicitud, 'reject_destination')"
-                    title="Rechazar"
-                  >
-                    <XCircleIcon class="w-4 h-4" />
-                  </button>
-                </template>
-                <template v-if="canFinalizeApproval(solicitud)">
-                  <button
-                    :class="[baseActionClass, 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200']"
-                    @click="openActionModal(solicitud, 'approve_final')"
-                    title="Aprobación final"
-                  >
-                    <CheckCircleIcon class="w-4 h-4" />
-                  </button>
-                </template>
-                <template v-if="canFinalizeRejection(solicitud)">
-                  <button
-                    :class="[baseActionClass, 'bg-rose-100 text-rose-600 hover:bg-rose-200']"
-                    @click="openActionModal(solicitud, 'reject_final')"
-                    title="Rechazar"
-                  >
-                    <XCircleIcon class="w-4 h-4" />
-                  </button>
-                </template>
-              </div>
-            </td>
-            <td class="py-3 px-4 font-mono text-sm text-gray-700">{{ solicitud.code }}</td>
-            <td class="py-3 px-4 text-gray-800">{{ solicitud.product?.name }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ solicitud.quantity }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ formatDate(solicitud.created_at) }}</td>
-            <td v-if="showOriginColumn" class="py-3 px-4 text-gray-700">
-              {{ solicitud.from_gerencia?.name ?? 'Sin gerencia' }}
-            </td>
-            <td class="py-3 px-4 text-gray-700">{{ solicitud.to_gerencia?.name ?? 'Sin gerencia' }}</td>
-            <td class="py-3 px-4">
-              <span :class="statusBadgeClass(solicitud.status)">
-                {{ formatStatus(solicitud.status, isViewer.value) }}
-              </span>
-            </td>
-            <td class="py-3 px-4 text-gray-700">
-              {{ latestJustification(solicitud) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+                  <template v-if="canTransferToVgo(solicitud) || canTransferToAdministracion(solicitud)">
+                    <button
+                      v-if="canTransferToVgo(solicitud)"
+                      :class="[baseActionClass, 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200']"
+                      @click="openActionModal(solicitud, 'transfer_vgo')"
+                      title="Transferir a VGO"
+                    >
+                      <ArrowsRightLeftIcon class="w-4 h-4" />
+                    </button>
+                    <button
+                      v-if="canTransferToAdministracion(solicitud)"
+                      :class="[baseActionClass, 'bg-purple-100 text-purple-600 hover:bg-purple-200']"
+                      @click="openActionModal(solicitud, 'transfer_administracion')"
+                      title="Transferir a Administración"
+                    >
+                      <ArrowsRightLeftIcon class="w-4 h-4" />
+                    </button>
+                  </template>
+
+                  <template v-if="canApproveDestination(solicitud)">
+                    <button
+                      :class="[baseActionClass, 'bg-green-100 text-green-600 hover:bg-green-200']"
+                      @click="openActionModal(solicitud, 'approve_destination')"
+                      title="Aprobar"
+                    >
+                      <CheckCircleIcon class="w-4 h-4" />
+                    </button>
+                    <button
+                      :class="[baseActionClass, 'bg-red-100 text-red-600 hover:bg-red-200']"
+                      @click="openActionModal(solicitud, 'reject_destination')"
+                      title="Rechazar"
+                    >
+                      <XCircleIcon class="w-4 h-4" />
+                    </button>
+                  </template>
+
+                  <template v-if="canFinalizeApproval(solicitud)">
+                    <button
+                      :class="[baseActionClass, 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200']"
+                      @click="openActionModal(solicitud, 'approve_final')"
+                      title="Aprobación final"
+                    >
+                      <CheckCircleIcon class="w-4 h-4" />
+                    </button>
+                  </template>
+
+                  <template v-if="canFinalizeRejection(solicitud)">
+                    <button
+                      :class="[baseActionClass, 'bg-rose-100 text-rose-600 hover:bg-rose-200']"
+                      @click="openActionModal(solicitud, 'reject_final')"
+                      title="Rechazar"
+                    >
+                      <XCircleIcon class="w-4 h-4" />
+                    </button>
+                  </template>
+                </div>
+              </td>
+
+              <td class="px-4 py-3 align-top font-mono text-sm text-gray-700 whitespace-nowrap">
+                {{ solicitud.code }}
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                <span class="block max-w-[16rem] break-words">
+                  {{ solicitud.product?.name }}
+                </span>
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                {{ solicitud.quantity }}
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                {{ formatDate(solicitud.created_at) }}
+              </td>
+              <td
+                v-if="showOriginColumn"
+                class="px-4 py-3 align-top text-sm text-gray-700"
+              >
+                <span class="block max-w-[12rem] break-words">
+                  {{ solicitud.from_gerencia?.name ?? 'Sin gerencia' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                <span class="block max-w-[12rem] break-words">
+                  {{ solicitud.to_gerencia?.name ?? 'Sin gerencia' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700 whitespace-nowrap">
+                <span :class="statusBadgeClass(solicitud.status)">
+                  {{ formatStatus(solicitud.status, isViewer.value) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                <span class="block max-w-[18rem] break-words">
+                  {{ latestJustification(solicitud) }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+
 
     <Pagination :links="solicitudes.links" class="mt-6" />
   </AdminLayout>

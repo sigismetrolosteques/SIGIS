@@ -4,6 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { usePage } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
+import { PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   users: Object,
@@ -30,6 +31,13 @@ function destroyUser(id) {
     });
   }
 }
+
+const roleLabel = (roleName) => {
+  if (roleName === 'super_admin') return 'Super Administrador';
+  if (roleName === 'admin') return 'Gestor';
+  if (roleName === 'viewer') return 'Empleado';
+  return roleName;
+};
 
 onMounted(() => {
   successMessage.value = page.props.flash?.success || null;
@@ -76,21 +84,25 @@ onMounted(() => {
             <td class="py-3 px-4 text-center">{{ u.id }}</td>
             <td class="py-3 px-4 text-center">{{ u.name }}</td>
             <td class="py-3 px-4 text-center">{{ u.email }}</td>
-            <td class="py-3 px-4 text-center">{{ u.roles.map(r => r.name).join(', ') }}</td>
+            <td class="py-3 px-4 text-center">{{ u.roles.map(r => roleLabel(r.name)).join(', ') }}</td>
             <td v-if="can.edit || can.delete" class="py-3 px-4 text-center">
-              <Link 
-                :href="route('user.edit', u.id)" 
-                class="text-blue-600 hover:underline mr-3"
-              >
-                Editar
-              </Link>
-              <button 
-                v-if="can.delete && $page.props.auth.user.id !== u.id"
-                @click="destroyUser(u.id)" 
-                class="text-red-600 hover:underline"
-              >
-                Eliminar
-              </button>
+              <div class="flex justify-center items-center gap-3">
+                <Link
+                  :href="route('user.edit', u.id)"
+                  class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Editar"
+                >
+                  <PencilIcon class="w-4 h-4" />
+                </Link>
+                <button
+                  v-if="can.delete && $page.props.auth.user.id !== u.id"
+                  @click="destroyUser(u.id)"
+                  class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Eliminar"
+                >
+                  <TrashIcon class="w-4 h-4" />
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

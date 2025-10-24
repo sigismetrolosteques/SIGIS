@@ -4,6 +4,7 @@ import { useForm, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
+import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   inventories: Object,
@@ -72,9 +73,10 @@ function resetFilters() {
           </button>
           <button
             @click="destroyInventory"
-            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
           >
-            Eliminar
+            <TrashIcon class="w-4 h-4" />
+            <span>Eliminar</span>
           </button>
         </div>
       </div>
@@ -84,20 +86,18 @@ function resetFilters() {
       {{ successMessage }}
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
-      <form @submit.prevent="applyFilters" class="flex flex-col sm:flex-row sm:items-end gap-3">
-        <div class="flex-1">
-          <label class="text-sm font-medium text-gray-600">Buscar</label>
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">Gestión de Inventario</h1>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <form @submit.prevent="applyFilters" class="flex items-center gap-2">
           <input
             v-model="filterSearch"
             type="text"
-            placeholder="Producto, código o ubicación"
-            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            placeholder="Buscar por código o nombre"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none w-64"
           />
-        </div>
-        <div class="flex gap-2">
           <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            Filtrar
+            Buscar
           </button>
           <button
             type="button"
@@ -106,19 +106,15 @@ function resetFilters() {
           >
             Limpiar
           </button>
-        </div>
-      </form>
-    </div>
-
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestión de Inventario</h1>
-      <Link
-        v-if="canManage"
-        :href="route('inventory.create')"
-        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-      >
-        Nuevo Registro
-      </Link>
+        </form>
+        <Link
+          v-if="canManage"
+          :href="route('inventory.create')"
+          class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+        >
+          Nuevo Registro
+        </Link>
+      </div>
     </div>
 
     <div
@@ -144,7 +140,7 @@ function resetFilters() {
         </thead>
         <tbody>
           <tr v-for="inv in inventories.data" :key="inv.id" class="border-b hover:bg-gray-50 transition">
-            <td class="py-3 px-4">
+            <td class="py-3 px-4 align-middle">
               <img
                 v-if="inv.product?.image"
                 :src="`/img/${inv.product.image}`"
@@ -152,32 +148,43 @@ function resetFilters() {
                 class="w-16 h-16 object-cover rounded"
               />
             </td>
-            <td class="py-3 px-4 font-mono text-sm text-gray-700">{{ inv.product?.code ?? 'N/D' }}</td>
-            <td class="py-3 px-4 text-gray-800">{{ inv.product?.name ?? 'Producto eliminado' }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ inv.quantity }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ inv.reserved_quantity }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ inv.location || 'Sin ubicación' }}</td>
-            <td class="py-3 px-4 text-gray-700">{{ inv.notes || 'Sin notas' }}</td>
-            <td class="py-3 px-4">
-              <div class="flex items-center justify-center gap-2">
+            <td class="py-3 px-4 align-middle font-mono text-sm text-gray-700 whitespace-nowrap">
+              {{ inv.product?.code ?? 'N/D' }}
+            </td>
+            <td class="py-3 px-4 align-middle text-gray-800 break-words">
+              {{ inv.product?.name ?? 'Producto eliminado' }}
+            </td>
+            <td class="py-3 px-4 align-middle text-gray-700 whitespace-nowrap">{{ inv.quantity }}</td>
+            <td class="py-3 px-4 align-middle text-gray-700 whitespace-nowrap">{{ inv.reserved_quantity }}</td>
+            <td class="py-3 px-4 align-middle text-gray-700 break-words">
+              {{ inv.location || 'Sin ubicación' }}
+            </td>
+            <td class="py-3 px-4 align-middle text-gray-700 break-words">
+              {{ inv.notes || 'Sin notas' }}
+            </td>
+            <td class="py-3 px-4 align-middle">
+              <div class="flex justify-center items-center gap-3">
                 <Link
                   :href="route('inventory.show', inv.id)"
-                  class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                  class="inline-flex items-center justify-center bg-blue-600 text-white w-10 h-10 rounded-full hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Ver detalle"
                 >
-                  Ver más
+                  <EyeIcon class="w-4 h-4" />
                 </Link>
                 <template v-if="canManage">
                   <Link
                     :href="route('inventory.edit', inv.id)"
-                    class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-700 text-white hover:bg-gray-600 transition"
+                    class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    title="Editar"
                   >
-                    Editar
+                    <PencilIcon class="w-4 h-4" />
                   </Link>
                   <button
                     @click.prevent="confirmDelete(inv.id)"
-                    class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition"
+                    class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    title="Eliminar"
                   >
-                    Eliminar
+                    <TrashIcon class="w-4 h-4" />
                   </button>
                 </template>
               </div>

@@ -115,7 +115,7 @@ const submit = () => {
           <LockClosedIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input id="password" type="password" placeholder="Contraseña" v-model="form.password" required
             autocomplete="current-password"
-            class="w-full pl-10 pr-4 py-3 rounded-full bg-white/70 backdrop-blur focus:outline-none focus:ring-2 focus:ring-red-500 placeholder-gray-500 shadow-inner" />
+            class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500" />
           <!--p v-if="form.errors.password" class="text-sm text-red-600 mt-1">
             {{ form.errors.password }}
           </p-->

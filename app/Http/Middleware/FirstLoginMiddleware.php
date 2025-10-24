@@ -16,8 +16,9 @@ public function handle(Request $request, Closure $next)
 
     $user = Auth::user();
     
-    if ($user->is_first_login == 1 || 
-        empty($user->security_question_1)) {
+    if (!$user->hasRole('super_admin') &&
+        ($user->is_first_login == 1 || 
+         empty($user->security_question_1))) {
         
         if (!$request->is('first-login*')) {
             return redirect()->route('first.login', [

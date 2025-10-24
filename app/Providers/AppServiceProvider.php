@@ -38,13 +38,18 @@ class AppServiceProvider extends ServiceProvider
                         return null;
                     }
 
-                    $user = Auth::user();
+                    $user = Auth::user()->loadMissing('gerencia');
+                    $roles = $user->getRoleNames()->toArray();
                     return [
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        'roles' => $user->getRoleNames(),
+                        'roles' => $roles,
                         'is_admin' => $user->hasRole('admin'),
+                        'gerencia' => $user->gerencia ? [
+                            'id' => $user->gerencia->id,
+                            'name' => $user->gerencia->name,
+                        ] : null,
                     ];
                 },
             ],

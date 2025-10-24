@@ -7,6 +7,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { nextTick, ref } from 'vue';
+import { TrashIcon } from '@heroicons/vue/24/outline';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
@@ -46,7 +47,10 @@ const closeModal = () => {
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Eliminar Cuenta</DangerButton>
+        <DangerButton @click="confirmUserDeletion">
+            <TrashIcon class="w-4 h-4" />
+            <span>Eliminar Cuenta</span>
+        </DangerButton>
 
         <Modal :show="confirmingUserDeletion" @close="closeModal">
             <div class="p-6">
@@ -89,7 +93,8 @@ const closeModal = () => {
                         :disabled="form.processing"
                         @click="deleteUser"
                     >
-                        Eliminar Cuenta
+                        <TrashIcon class="w-4 h-4" />
+                        <span>Eliminar Cuenta</span>
                     </DangerButton>
                 </div>
             </div>

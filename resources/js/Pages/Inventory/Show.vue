@@ -1,6 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link } from '@inertiajs/vue3';
+import { PencilIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   inventory: Object,
@@ -28,9 +29,10 @@ const props = defineProps({
           <Link
             v-if="canManage"
             :href="route('inventory.edit', inventory.id)"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            Editar
+            <PencilIcon class="w-4 h-4" />
+            <span>Editar</span>
           </Link>
         </div>
       </div>

@@ -8,6 +8,7 @@ use App\Models\Solicitud;
 use App\Models\Gerencia;
 use App\Models\Product;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class ReportController extends Controller
 {
@@ -22,7 +23,16 @@ class ReportController extends Controller
         $productId = $request->query('product_id');
         $perPage = $request->query('per_page', 15);
 
-        $query = Solicitud::with(['product', 'fromGerencia', 'toGerencia', 'creator']);
+        $user = Auth::user();
+        $isAdmin = $user?->hasAnyRole(['super_admin', 'admin']);
+
+        $baseQuery = Solicitud::query();
+
+        if ($user && !$isAdmin) {
+            $baseQuery->where('created_by', $user->id);
+        }
+
+        $query = (clone $baseQuery)->with(['product', 'fromGerencia', 'toGerencia', 'creator']);
 
         if ($from) {
             $query->whereDate('created_at', '>=', $from);
@@ -47,10 +57,10 @@ class ReportController extends Controller
 
         // totales para el resumen
         $totales = [
-            'total' => Solicitud::count(),
-            'pendiente' => Solicitud::where('status', 'pendiente')->count(),
-            'aprobado' => Solicitud::where('status', 'aprobado')->count(),
-            'rechazado' => Solicitud::where('status', 'rechazado')->count(),
+            'total' => (clone $baseQuery)->count(),
+            'pendiente' => (clone $baseQuery)->where('status', 'pendiente')->count(),
+            'aprobado' => (clone $baseQuery)->where('status', 'aprobado')->count(),
+            'rechazado' => (clone $baseQuery)->where('status', 'rechazado')->count(),
         ];
 
         $gerencias = Gerencia::select('id', 'name')->get();
@@ -83,7 +93,16 @@ class ReportController extends Controller
         $toGer = $request->query('to_gerencia_id');
         $productId = $request->query('product_id');
 
-        $query = Solicitud::with(['product', 'fromGerencia', 'toGerencia', 'creator']);
+        $user = Auth::user();
+        $isAdmin = $user?->hasAnyRole(['super_admin', 'admin']);
+
+        $baseQuery = Solicitud::query();
+
+        if ($user && !$isAdmin) {
+            $baseQuery->where('created_by', $user->id);
+        }
+
+        $query = (clone $baseQuery)->with(['product', 'fromGerencia', 'toGerencia', 'creator']);
 
         if ($from) $query->whereDate('created_at', '>=', $from);
         if ($to) $query->whereDate('created_at', '<=', $to);
@@ -94,12 +113,11 @@ class ReportController extends Controller
 
         $solicitudes = $query->latest()->get();
 
-        // Totales también si necesitas mostrarlos en el PDF
         $totales = [
             'total' => $solicitudes->count(),
-            'pendiente' => $solicitudes->where('status','pendiente')->count(),
-            'aprobado' => $solicitudes->where('status','aprobado')->count(),
-            'rechazado' => $solicitudes->where('status','rechazado')->count(),
+            'pendiente' => $solicitudes->where('status', 'pendiente')->count(),
+            'aprobado' => $solicitudes->where('status', 'aprobado')->count(),
+            'rechazado' => $solicitudes->where('status', 'rechazado')->count(),
         ];
 
         $pdf = Pdf::loadView('reportes.solicitudes_pdf', [

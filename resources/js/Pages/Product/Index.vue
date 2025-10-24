@@ -4,6 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
 import { ref, onMounted } from 'vue';
+import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   products: Object,
@@ -76,9 +77,10 @@ function resetFilters() {
           </button>
           <button
             @click="destroyProduct"
-            class="px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
+            class="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md"
           >
-            Eliminar
+            <TrashIcon class="w-4 h-4" />
+            <span>Eliminar</span>
           </button>
         </div>
       </div>
@@ -143,36 +145,43 @@ function resetFilters() {
             :key="product.id"
             class="border-b border-gray-200 hover:bg-gray-50"
           >
-            <td class="py-3 px-4">
+            <td class="py-3 px-4 align-middle">
               <img
                 v-if="product.image"
                 :src="`/img/${product.image}`"
                 class="w-16 h-16 object-cover rounded-md"
               />
             </td>
-            <td class="py-3 px-4 font-mono text-sm text-gray-700">{{ product.code }}</td>
-            <td class="py-3 px-4">{{ product.name }}</td>
-            <td class="py-3 px-4">{{ product.description }}</td>
-            <td class="py-3 px-4">
-              <div class="flex justify-center gap-2">
+            <td class="py-3 px-4 align-middle font-mono text-sm text-gray-700 whitespace-nowrap">
+              {{ product.code }}
+            </td>
+            <td class="py-3 px-4 align-middle break-words">{{ product.name }}</td>
+            <td class="py-3 px-4 align-middle break-words">
+              {{ product.description }}
+            </td>
+            <td class="py-3 px-4 align-middle">
+              <div class="flex justify-center items-center gap-3">
                 <Link
                   :href="route('product.show', product.id)"
-                  class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                  class="inline-flex items-center justify-center bg-blue-600 text-white w-10 h-10 rounded-full hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Ver detalle"
                 >
-                  Ver más
+                  <EyeIcon class="w-4 h-4" />
                 </Link>
                 <template v-if="canManage">
                   <Link
                     :href="route('product.edit', product.id)"
-                    class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-gray-700 text-white hover:bg-gray-600 transition"
+                    class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    title="Editar"
                   >
-                    Editar
+                    <PencilIcon class="w-4 h-4" />
                   </Link>
                   <button
                     @click.prevent="confirmDelete(product.id)"
-                     class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 transition"
+                    class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    title="Eliminar"
                   >
-                    Eliminar
+                    <TrashIcon class="w-4 h-4" />
                   </button>
                 </template>
               </div>

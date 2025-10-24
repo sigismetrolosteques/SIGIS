@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Gerencia;
+use App\Models\Solicitud;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use App\Services\RoleService;
@@ -64,12 +66,32 @@ class UserController extends Controller
     {
         $this->authorizeUserManagement();
 
+        $messages = [
+            'name.required' => 'El nombre es obligatorio.',
+            'name.max' => 'El nombre no puede superar 255 caracteres.',
+            'email.required' => 'El correo electrónico es obligatorio.',
+            'email.email' => 'Ingresa un correo electrónico válido.',
+            'email.unique' => 'El correo electrónico ya está registrado.',
+            'cedula.required' => 'La cédula es obligatoria.',
+            'cedula.regex' => 'La cédula debe tener el formato V-12345678.',
+            'cedula.unique' => 'La cédula ya está registrada.',
+            'gerencia_id.required' => 'Selecciona una gerencia.',
+            'gerencia_id.exists' => 'La gerencia seleccionada no es válida.',
+        ];
+
+        $attributes = [
+            'name' => 'nombre',
+            'email' => 'correo electrónico',
+            'cedula' => 'cédula',
+            'gerencia_id' => 'gerencia',
+        ];
+
         $request->validate([
             'name'        => 'required|string|max:255',
             'email'       => 'required|email|unique:users',
             'cedula'      => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users',
             'gerencia_id' => 'required|exists:gerencias,id',
-        ]);
+        ], $messages, $attributes);
 
         $gerencia = Gerencia::findOrFail($request->gerencia_id);
         $tempPassword = Str::random(8);
@@ -143,12 +165,32 @@ class UserController extends Controller
         try {
             $isManager = $auth->hasAnyRole(['super_admin', 'admin']);
 
+            $messages = [
+                'name.required' => 'El nombre es obligatorio.',
+                'name.max' => 'El nombre no puede superar 255 caracteres.',
+                'email.required' => 'El correo electrónico es obligatorio.',
+                'email.email' => 'Ingresa un correo electrónico válido.',
+                'email.unique' => 'El correo electrónico ya está registrado.',
+                'cedula.required' => 'La cédula es obligatoria.',
+                'cedula.regex' => 'La cédula debe tener el formato V-12345678.',
+                'cedula.unique' => 'La cédula ya está registrada.',
+                'gerencia_id.required' => 'Selecciona una gerencia.',
+                'gerencia_id.exists' => 'La gerencia seleccionada no es válida.',
+            ];
+
+            $attributes = [
+                'name' => 'nombre',
+                'email' => 'correo electrónico',
+                'cedula' => 'cédula',
+                'gerencia_id' => 'gerencia',
+            ];
+
             $validated = $request->validate([
                 'name'        => 'required|string|max:255',
                 'email'       => 'required|email|unique:users,email,' . $user->id,
                 'cedula'      => 'required|string|regex:/^[VE]-\d{7,9}$/|unique:users,cedula,' . $user->id,
                 'gerencia_id' => $isManager ? 'required|exists:gerencias,id' : 'nullable',
-            ]);
+            ], $messages, $attributes);
 
             $gerenciaId = $isManager ? $validated['gerencia_id'] : $user->gerencia_id;
             $gerencia = Gerencia::findOrFail($gerenciaId);
@@ -187,7 +229,19 @@ class UserController extends Controller
             abort(403, 'No puedes eliminar tu propio usuario');
         }
 
-        $user->delete();
+        try {
+            DB::transaction(function () use ($user, $auth) {
+                Solicitud::where('created_by', $user->id)->update([
+                    'created_by' => $auth->id,
+                ]);
+
+                $user->delete();
+            });
+        } catch (\Throwable $e) {
+            Log::error('Error eliminando usuario: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'No se pudo eliminar el usuario. Por favor, intenta nuevamente.']);
+        }
+
         return redirect()->route('user.index')->with('success', 'Usuario eliminado correctamente');
     }
 

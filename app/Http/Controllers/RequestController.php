@@ -75,42 +75,9 @@ class RequestController extends Controller
                     }
                 });
             })
-            ->when($workflowRole === 'vgo', function ($query) {
-                $query->where(function ($sub) {
-                    $sub->where('status', 'vgo')
-                        ->orWhere(function ($inner) {
-                            $inner->where('status', 'pendiente')
-                                ->where(function ($pending) {
-                                    $pending->whereNull('destination_decision')
-                                        ->orWhere('destination_decision', 'aprobado');
-                                });
-                        });
-                });
-            })
-            ->when($workflowRole === 'administracion', function ($query) {
-                $query->where(function ($sub) {
-                    $sub->where('status', 'administracion')
-                        ->orWhere(function ($inner) {
-                            $inner->where('status', 'pendiente')
-                                ->where(function ($pending) {
-                                    $pending->whereNull('destination_decision')
-                                        ->orWhere('destination_decision', 'aprobado');
-                                });
-                        });
-                });
-            })
-            ->when($workflowRole === 'normalizacion', function ($query) {
-                $query->where(function ($sub) {
-                    $sub->where('status', 'pendiente')
-                        ->orWhere(function ($inner) {
-                            $inner->whereIn('status', ['vgo', 'administracion'])
-                                ->where(function ($pending) {
-                                    $pending->whereNull('destination_decision')
-                                        ->orWhere('destination_decision', 'aprobado');
-                                });
-                        });
-                });
-            })
+            ->when($workflowRole === 'vgo', fn ($query) => $query->whereIn('status', ['vgo', 'aprobado', 'rechazado']))
+            ->when($workflowRole === 'administracion', fn ($query) => $query->whereIn('status', ['administracion', 'aprobado', 'rechazado']))
+            ->when($workflowRole === 'normalizacion', fn ($query) => $query->whereIn('status', ['pendiente', 'vgo', 'administracion', 'aprobado', 'rechazado']))
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -223,8 +190,8 @@ class RequestController extends Controller
             switch ($data['action']) {
                 case 'transfer_vgo':
                 case 'transfer_administracion':
-                    $this->assertCanTransfer($role, $solicitud);
                     $targetStatus = $data['action'] === 'transfer_vgo' ? 'vgo' : 'administracion';
+                    $this->assertCanTransfer($role, $solicitud, $targetStatus);
                     $solicitud->status = $targetStatus;
                     $solicitud->destination_decision = null;
                     $solicitud->destination_decision_by = null;
@@ -348,9 +315,26 @@ class RequestController extends Controller
         return $cache[$name];
     }
 
-    protected function assertCanTransfer(string $role, Solicitud $solicitud): void
+    protected function assertCanTransfer(string $role, Solicitud $solicitud, string $targetStatus): void
     {
-        if (!in_array($role, ['super_admin', 'normalizacion'], true) || $solicitud->status !== 'pendiente') {
+        if ($solicitud->status === $targetStatus) {
+            throw ValidationException::withMessages([
+                'action' => 'La solicitud ya está asignada a la gerencia seleccionada.',
+            ]);
+        }
+
+        if ($role === 'super_admin') {
+            return;
+        }
+
+        $canTransfer = match ($role) {
+            'normalizacion' => $solicitud->status === 'pendiente',
+            'vgo' => $solicitud->status === 'vgo',
+            'administracion' => $solicitud->status === 'administracion',
+            default => false,
+        };
+
+        if (!$canTransfer) {
             throw ValidationException::withMessages([
                 'action' => 'No tienes permisos para transferir esta solicitud.',
             ]);

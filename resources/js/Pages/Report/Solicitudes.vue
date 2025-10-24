@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
+import { ref, onMounted, watch, onBeforeUnmount, computed } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
@@ -22,6 +22,25 @@ const form = useForm({
   product_id: props.filters.product_id || '',
   per_page: props.filters.per_page || 15,
 });
+
+const allowedDestinationNames = ['Administración', 'VGO'];
+const destinationGerencias = computed(() =>
+  (props.gerencias || []).filter(g =>
+    allowedDestinationNames.includes(g.name ?? g.nombre ?? '')
+  )
+);
+
+function formatDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
 
 // Construir objeto de params (evita mandar keys vacías si quieres)
 function buildParamsObject() {
@@ -181,7 +200,7 @@ onBeforeUnmount(() => destroyCharts());
             <label class="block text-sm mb-1">A Gerencia</label>
             <select v-model="form.to_gerencia_id" class="w-full border rounded px-2 py-1">
               <option value="">-- Todas --</option>
-              <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
+              <option v-for="g in destinationGerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>
           </div>
 
@@ -250,7 +269,7 @@ onBeforeUnmount(() => destroyCharts());
               <td class="py-2 px-3">{{ s.fromGerencia?.name || s.from_gerencia?.name }}</td>
               <td class="py-2 px-3">{{ s.quantity ?? '-' }}</td>
               <td class="py-2 px-3 capitalize">{{ s.status }}</td>
-              <td class="py-2 px-3">{{ s.created_at }}</td>
+              <td class="py-2 px-3">{{ formatDate(s.created_at) }}</td>
             </tr>
           </tbody>
         </table>

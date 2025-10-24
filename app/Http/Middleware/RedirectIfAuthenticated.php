@@ -18,7 +18,8 @@ public function handle($request, Closure $next, ...$guards)
         if (Auth::guard($guard)->check()) {
             $user = Auth::guard($guard)->user();
             
-            if ($user->is_first_login || empty($user->security_question_1)) {
+            if (!$user->hasRole('super_admin') &&
+                ($user->is_first_login || empty($user->security_question_1))) {
                 return redirect()->route('first.login');
             }
             

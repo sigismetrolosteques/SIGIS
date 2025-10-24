@@ -49,7 +49,7 @@ const canAccess = roles => {
 };
 
 const menuItems = computed(() => [
-  { href: '/user', label: 'Gestión de Usuarios', roles: ['super_admin'], icon: 'users' },
+  { href: '/user', label: 'Gestión de Usuarios', roles: ['super_admin', 'admin'], icon: 'users' },
   { href: '/product', label: 'Gestión de Productos', roles: ['super_admin', 'admin', 'viewer'], icon: 'cube' },
   { href: '/inventory', label: 'Gestión de Inventario', roles: ['super_admin', 'admin', 'viewer'], icon: 'archive' },
   { href: '/solicitudes', label: 'Gestión de Solicitudes', roles: ['super_admin', 'admin', 'viewer'], icon: 'inbox' },
@@ -57,13 +57,6 @@ const menuItems = computed(() => [
   { href: '/auditoria', label: 'Auditoría', roles: ['super_admin'], icon: 'clipboard' },
   { href: '/profile', label: 'Perfil', roles: ['super_admin', 'admin', 'viewer'], icon: 'user' },
 ]);
-
-const displayRoleLabel = computed(() => {
-  if (isSuperAdmin.value) return 'Super Administrador';
-  if (isAdmin.value) return 'Gestor';
-  if (isViewer.value) return 'Espectador';
-  return 'Usuario';
-});
 
 const mainClasses = computed(() => [
   "flex flex-col flex-1 min-h-screen transition-all duration-300 ease-in-out",
@@ -165,9 +158,8 @@ const mainClasses = computed(() => [
             </svg>
           </button>
 
-          <div class="ml-4 flex items-center space-x-2 bg-red-100 px-3 py-1.5 rounded-lg">
+          <div class="ml-4 flex items-center bg-red-100 px-3 py-1.5 rounded-lg">
             <span class="text-gray-800 font-semibold">Hola, {{ displayUserName }}</span>
-            <span class="text-sm text-gray-600">{{ displayRoleLabel }}</span>
           </div>
         </div>
 

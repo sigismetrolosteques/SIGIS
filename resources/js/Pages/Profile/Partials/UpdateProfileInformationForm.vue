@@ -13,6 +13,7 @@ const props = defineProps({
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const flash = computed(() => page.props.flash);
+const gerenciaName = computed(() => user.value?.gerencia?.name ?? 'Sin gerencia');
 
 const form = useForm({
     name: user.value.name,
@@ -78,6 +79,18 @@ const submit = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div>
+                <InputLabel for="gerencia" value="Gerencia" />
+                <input
+                    id="gerencia"
+                    type="text"
+                    :value="gerenciaName"
+                    class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 px-3 py-2 text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    disabled
+                    readonly
+                />
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">

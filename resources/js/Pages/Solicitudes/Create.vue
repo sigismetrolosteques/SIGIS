@@ -25,6 +25,25 @@ const generalError = ref('');
 const successMessage = ref(props.flash?.success || null);
 
 // inventarios filtrados por producto seleccionado
+const availableInventoryProductIds = computed(() => {
+  const ids = new Set();
+  props.inventories.forEach((inventory) => {
+    const available = (Number(inventory.quantity) || 0) - (Number(inventory.reserved_quantity) || 0);
+    if (available > 0) {
+      ids.add(inventory.product_id);
+    }
+  });
+  return ids;
+});
+
+const productsForInventario = computed(() =>
+  props.products.filter(product => availableInventoryProductIds.value.has(product.id))
+);
+
+const displayedProducts = computed(() =>
+  activeTab.value === 'inventario' ? productsForInventario.value : props.products
+);
+
 const inventoriesForProduct = computed(() => {
   if (!form.product_id) return [];
   return props.inventories.filter(i => i.product_id === Number(form.product_id));
@@ -71,6 +90,23 @@ watch(activeTab, (tab) => {
     form.quantity = 1;
   }
   form.clearErrors();
+
+  if (tab === 'inventario' && form.product_id) {
+    const productId = Number(form.product_id);
+    if (!availableInventoryProductIds.value.has(productId)) {
+      form.product_id = '';
+      form.inventory_id = null;
+    }
+  }
+});
+
+watch(displayedProducts, (products) => {
+  const productId = Number(form.product_id);
+  if (!form.product_id) return;
+  if (!products.some(product => product.id === productId)) {
+    form.product_id = '';
+    form.inventory_id = null;
+  }
 });
 
 function setTab(tab) {
@@ -145,7 +181,7 @@ function submit() {
                   class="w-full border rounded px-3 py-2"
                   :class="{ 'border-red-500': form.errors.product_id }">
             <option :value="''">-- Selecciona un producto --</option>
-            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
+            <option v-for="p in displayedProducts" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
           <div v-if="form.errors.product_id" class="text-red-600 mt-1 text-sm">{{ form.errors.product_id }}</div>
         </div>

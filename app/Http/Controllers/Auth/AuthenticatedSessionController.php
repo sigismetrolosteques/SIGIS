@@ -40,12 +40,13 @@ public function store(LoginRequest $request)
     }
 
     $user = Auth::user();
+    $isSuperAdmin = $user->hasRole('super_admin');
     
     // Verificación exhaustiva del estado de primer login
-    if ($user->is_first_login == 1 || 
-        empty($user->security_question_1) || 
-        empty($user->security_answer_1)) {
-        
+    if (!$isSuperAdmin &&
+        ($user->is_first_login == 1 || 
+         empty($user->security_question_1) || 
+         empty($user->security_answer_1))) {
         Auth::logout();
         
         // Redirección directa con parámetros en la URL

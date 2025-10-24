@@ -16,11 +16,10 @@ public function store(Request $request)
     
     if (Auth::attempt($credentials)) {
         $user = Auth::user();
-        
-        // Verificación exhaustiva del estado
-        $requiresSetup = $user->is_first_login || 
-                        empty($user->security_question_1) ||
-                        empty($user->security_answer_1);
+        $requiresSetup = !$user->hasRole('super_admin') &&
+                         ($user->is_first_login ||
+                          empty($user->security_question_1) ||
+                          empty($user->security_answer_1));
         
         if ($requiresSetup) {
             Auth::logout();
