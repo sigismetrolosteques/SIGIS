@@ -19,7 +19,6 @@ class ReportController extends Controller
         $to = $request->query('to');
         $status = $request->query('status'); // pendiente, aprobado, rechazado
         $fromGer = $request->query('from_gerencia_id');
-        $toGer = $request->query('to_gerencia_id');
         $productId = $request->query('product_id');
         $perPage = $request->query('per_page', 15);
 
@@ -46,9 +45,6 @@ class ReportController extends Controller
         if ($fromGer) {
             $query->where('from_gerencia_id', $fromGer);
         }
-        if ($toGer) {
-            $query->where('to_gerencia_id', $toGer);
-        }
         if ($productId) {
             $query->where('product_id', $productId);
         }
@@ -58,7 +54,7 @@ class ReportController extends Controller
         // totales para el resumen
         $totales = [
             'total' => (clone $baseQuery)->count(),
-            'pendiente' => (clone $baseQuery)->where('status', 'pendiente')->count(),
+            'en_proceso' => (clone $baseQuery)->whereNotIn('status', ['aprobado', 'rechazado'])->count(),
             'aprobado' => (clone $baseQuery)->where('status', 'aprobado')->count(),
             'rechazado' => (clone $baseQuery)->where('status', 'rechazado')->count(),
         ];
@@ -74,7 +70,6 @@ class ReportController extends Controller
                 'to' => $to,
                 'status' => $status,
                 'from_gerencia_id' => $fromGer,
-                'to_gerencia_id' => $toGer,
                 'product_id' => $productId,
                 'per_page' => $perPage,
             ],
@@ -90,7 +85,6 @@ class ReportController extends Controller
         $to = $request->query('to');
         $status = $request->query('status');
         $fromGer = $request->query('from_gerencia_id');
-        $toGer = $request->query('to_gerencia_id');
         $productId = $request->query('product_id');
 
         $user = Auth::user();
@@ -108,14 +102,13 @@ class ReportController extends Controller
         if ($to) $query->whereDate('created_at', '<=', $to);
         if ($status) $query->where('status', $status);
         if ($fromGer) $query->where('from_gerencia_id', $fromGer);
-        if ($toGer) $query->where('to_gerencia_id', $toGer);
         if ($productId) $query->where('product_id', $productId);
 
         $solicitudes = $query->latest()->get();
 
         $totales = [
             'total' => $solicitudes->count(),
-            'pendiente' => $solicitudes->where('status', 'pendiente')->count(),
+            'en_proceso' => $solicitudes->whereNotIn('status', ['aprobado', 'rechazado'])->count(),
             'aprobado' => $solicitudes->where('status', 'aprobado')->count(),
             'rechazado' => $solicitudes->where('status', 'rechazado')->count(),
         ];
@@ -128,7 +121,6 @@ class ReportController extends Controller
                 'to' => $to,
                 'status' => $status,
                 'from_gerencia_id' => $fromGer,
-                'to_gerencia_id' => $toGer,
                 'product_id' => $productId,
             ],
         ])->setPaper('a4', 'landscape'); // por ejemplo

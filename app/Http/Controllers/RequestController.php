@@ -13,17 +13,37 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class RequestController extends Controller
 {
-    protected array $adminGerencias = ['Administración', 'VGO', 'Normalización'];
-
     protected array $statusOptions = [
-        'pendiente' => 'Pendiente',
-        'vgo' => 'VGO',
+        'pendiente' => 'Normalización',
+        'vp_mantenimiento' => 'VP. Mantenimiento',
+        'vp_soporte' => 'VP. Soporte',
         'administracion' => 'Administración',
+        'compras' => 'Compras',
+        'normalizacion_final' => 'Normalización (Entrega)',
         'aprobado' => 'Aprobado',
         'rechazado' => 'Rechazado',
+    ];
+
+    protected array $workflowOrder = [
+        'pendiente',
+        'vp_mantenimiento',
+        'vp_soporte',
+        'administracion',
+        'compras',
+        'normalizacion_final',
+    ];
+
+    protected array $stageGerencias = [
+        'pendiente' => 'Normalización',
+        'vp_mantenimiento' => 'VP. Mantenimiento',
+        'vp_soporte' => 'VP. Soporte',
+        'administracion' => 'Administración',
+        'compras' => 'Compras',
+        'normalizacion_final' => 'Normalización',
     ];
 
     // Listado de solicitudes
@@ -31,7 +51,7 @@ class RequestController extends Controller
     {
         $filters = $request->validate([
             'search' => 'nullable|string|max:255',
-            'status' => 'nullable|in:pendiente,vgo,administracion,aprobado,rechazado',
+            'status' => 'nullable|in:pendiente,vp_mantenimiento,vp_soporte,administracion,compras,normalizacion_final,aprobado,rechazado',
             'from_date' => 'nullable|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
         ]);
@@ -51,7 +71,6 @@ class RequestController extends Controller
                 'fromGerencia',
                 'toGerencia',
                 'creator',
-                'destinationDecisionUser',
                 'statusLogs.user',
                 'latestStatusLog',
             ])
@@ -75,9 +94,6 @@ class RequestController extends Controller
                     }
                 });
             })
-            ->when($workflowRole === 'vgo', fn ($query) => $query->whereIn('status', ['vgo', 'aprobado', 'rechazado']))
-            ->when($workflowRole === 'administracion', fn ($query) => $query->whereIn('status', ['administracion', 'aprobado', 'rechazado']))
-            ->when($workflowRole === 'normalizacion', fn ($query) => $query->whereIn('status', ['pendiente', 'vgo', 'administracion', 'aprobado', 'rechazado']))
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -92,21 +108,14 @@ class RequestController extends Controller
         ]);
     }
 
-    // Formulario de creación
     public function create()
     {
-        $products = Product::all();
-        $gerencias = Gerencia::whereIn('name', ['Administración', 'VGO'])->get();
-        $inventories = Inventory::all();
-
         return Inertia::render('Solicitudes/Create', [
-            'products' => $products,
-            'gerencias' => $gerencias,
-            'inventories' => $inventories,
+            'products' => Product::all(),
+            'inventories' => Inventory::all(),
         ]);
     }
 
-    // Guardar nueva solicitud y reservar cantidad
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -114,20 +123,17 @@ class RequestController extends Controller
             'product_id' => 'required|exists:products,id',
             'inventory_id' => 'nullable|exists:inventories,id|required_if:request_type,inventario',
             'quantity' => 'required|integer|min:1',
-            'to_gerencia_id' => 'required|exists:gerencias,id',
             'description' => 'nullable|string',
+            'return_date' => 'nullable|date',
         ]);
 
         $user = Auth::user();
+        $product = Product::findOrFail($data['product_id']);
         $inventory = $data['request_type'] === 'inventario'
             ? Inventory::find($data['inventory_id'])
             : null;
 
-        if ($data['request_type'] === 'inventario' && !$inventory) {
-            return back()->withErrors(['inventory_id' => 'Inventario no válido']);
-        }
-
-        if ($inventory && $inventory->product_id != $data['product_id']) {
+        if ($inventory && $inventory->product_id !== $product->id) {
             return back()->withErrors(['inventory_id' => 'El inventario seleccionado no pertenece al producto elegido']);
         }
 
@@ -135,33 +141,48 @@ class RequestController extends Controller
             return back()->withErrors(['quantity' => 'La cantidad solicitada supera el stock disponible']);
         }
 
-        $destinyGerencia = Gerencia::find($data['to_gerencia_id']);
-        if (!$destinyGerencia || !in_array($destinyGerencia->name, ['Administración', 'VGO'], true)) {
-            return back()->withErrors(['to_gerencia_id' => 'La solicitud sólo puede asignarse a Administración o VGO']);
+        if (in_array($product->tipo_material, ['equipos', 'herramientas'], true) && empty($data['return_date'])) {
+            return back()->withErrors(['return_date' => 'Debe indicar una fecha de devolución para equipos y herramientas.']);
         }
+
+        $normalizacionId = $this->getGerenciaIdByName('Normalización');
+        if (!$normalizacionId) {
+            return back()->withErrors(['general' => 'No se encontró la gerencia de Normalización.']);
+        }
+
+        $returnDate = in_array($product->tipo_material, ['equipos', 'herramientas'], true)
+            ? ($data['return_date'] ?? null)
+            : null;
 
         DB::beginTransaction();
         try {
             $solicitud = Solicitud::create([
                 'code' => strtoupper(uniqid('REQ-')),
-                'product_id' => $data['product_id'],
+                'product_id' => $product->id,
                 'inventory_id' => $inventory?->id,
-                'quantity' => $data['quantity'],
+                'quantity' => (int) $data['quantity'],
+                'approved_quantity' => 0,
                 'created_by' => $user->id,
                 'from_gerencia_id' => $user->gerencia_id ?? null,
-                'to_gerencia_id' => $data['to_gerencia_id'],
+                'to_gerencia_id' => $normalizacionId,
                 'status' => 'pendiente',
                 'description' => $data['description'] ?? null,
+                'return_date' => $returnDate,
             ]);
 
             if ($inventory) {
-                $inventory->reserved_quantity += (int) $data['quantity'];
-                $inventory->save();
+                $this->reserveInventory($inventory, (int) $data['quantity']);
             }
 
-            $this->createStatusLog($solicitud, 'created', 'pendiente', $solicitud->description);
+            $this->createStatusLog(
+                $solicitud,
+                'created',
+                'pendiente',
+                $data['description'] ?? 'Solicitud creada'
+            );
 
             DB::commit();
+
             return redirect()->route('solicitudes.index')->with('success', 'Solicitud creada correctamente');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -169,109 +190,216 @@ class RequestController extends Controller
         }
     }
 
-    // Actualizar estado
     public function updateStatus(Request $request, Solicitud $solicitud)
     {
         $data = $request->validate([
-            'action' => 'required|in:transfer_vgo,transfer_administracion,approve_destination,reject_destination,approve_final,reject_final',
+            'action' => 'required|in:approve_stage,reject_stage,compras_approve,compras_reject,finalize_order',
             'justification' => 'required|string|min:3|max:1000',
+            'attachment' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png',
+            'approved_quantity' => 'nullable|integer|min:1',
         ]);
 
-        $user = Auth::user();
-        $role = $this->resolveWorkflowRole($user);
+        $role = $this->resolveWorkflowRole(Auth::user());
         $inventory = $solicitud->inventory_id ? Inventory::find($solicitud->inventory_id) : null;
 
         if ($solicitud->inventory_id && !$inventory) {
             return back()->withErrors(['inventory' => 'Inventario no encontrado']);
         }
 
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('solicitudes/' . $solicitud->id, 'public');
+        }
+
         DB::beginTransaction();
         try {
             switch ($data['action']) {
-                case 'transfer_vgo':
-                case 'transfer_administracion':
-                    $targetStatus = $data['action'] === 'transfer_vgo' ? 'vgo' : 'administracion';
-                    $this->assertCanTransfer($role, $solicitud, $targetStatus);
-                    $solicitud->status = $targetStatus;
-                    $solicitud->destination_decision = null;
-                    $solicitud->destination_decision_by = null;
-                    $solicitud->destination_decision_at = null;
-                    $solicitud->destination_justification = null;
-                    $destinyId = $this->getGerenciaIdByName($targetStatus === 'vgo' ? 'VGO' : 'Administración');
-                    if ($destinyId) {
-                        $solicitud->to_gerencia_id = $destinyId;
-                    }
-                    $solicitud->save();
-                    $this->createStatusLog($solicitud, 'transferred', $targetStatus, $data['justification']);
-                    break;
-
-                case 'approve_destination':
-                    $this->assertCanApproveDestination($role, $solicitud);
-                    $solicitud->destination_decision = 'aprobado';
-                    $solicitud->destination_decision_by = $user->id;
-                    $solicitud->destination_decision_at = now();
-                    $solicitud->destination_justification = $data['justification'];
-                    $solicitud->save();
-                    $this->createStatusLog($solicitud, 'destination_approved', $solicitud->status, $data['justification']);
-                    break;
-
-                case 'reject_destination':
-                    $this->assertCanApproveDestination($role, $solicitud);
-                    if ($inventory) {
-                        $this->releaseReservation($inventory, $solicitud);
-                    }
-                    $solicitud->status = 'rechazado';
-                    $solicitud->destination_decision = 'rechazado';
-                    $solicitud->destination_decision_by = $user->id;
-                    $solicitud->destination_decision_at = now();
-                    $solicitud->destination_justification = $data['justification'];
-                    $solicitud->save();
-                    $this->createStatusLog($solicitud, 'destination_rejected', 'rechazado', $data['justification']);
-                    break;
-
-                case 'approve_final':
-                    $this->assertCanFinalize($role, $solicitud);
-                    if ($solicitud->destination_decision !== 'aprobado') {
+                case 'approve_stage':
+                    $allowedStages = ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion'];
+                    if (!in_array($solicitud->status, $allowedStages, true)) {
                         throw ValidationException::withMessages([
-                            'action' => 'La solicitud debe ser aprobada por la gerencia asignada antes de la aprobación final.',
+                            'action' => 'La acción seleccionada no es válida para el estatus actual.',
+                        ]);
+                    }
+
+                    $this->ensureRoleForStage($solicitud->status, $role);
+
+                    $nextStage = $this->getNextStage($solicitud->status);
+                    if (!$nextStage) {
+                        throw ValidationException::withMessages([
+                            'action' => 'No se pudo determinar el siguiente paso del flujo.',
+                        ]);
+                    }
+
+                    $solicitud->status = $nextStage;
+                    $solicitud->to_gerencia_id = $this->getGerenciaIdForStage($nextStage);
+                    $solicitud->save();
+
+                    $this->createStatusLog(
+                        $solicitud,
+                        'approve_stage',
+                        $nextStage,
+                        $data['justification'],
+                        $attachmentPath
+                    );
+                    break;
+
+                case 'reject_stage':
+                    $allowedStages = ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'normalizacion_final'];
+                    if (!in_array($solicitud->status, $allowedStages, true)) {
+                        throw ValidationException::withMessages([
+                            'action' => 'La acción seleccionada no es válida para el estatus actual.',
+                        ]);
+                    }
+
+                    $this->ensureRoleForStage($solicitud->status, $role);
+
+                    if ($solicitud->status === 'pendiente') {
+                        if ($inventory) {
+                            $remaining = $solicitud->quantity - $solicitud->approved_quantity;
+                            if ($remaining > 0) {
+                                $this->releaseReservation($inventory, $remaining);
+                            }
+                        }
+                        $solicitud->status = 'rechazado';
+                        $solicitud->to_gerencia_id = null;
+                    } elseif ($solicitud->status === 'normalizacion_final') {
+                        $solicitud->status = 'compras';
+                        $solicitud->to_gerencia_id = $this->getGerenciaIdForStage('compras');
+                    } else {
+                        $previousStage = $this->getPreviousStage($solicitud->status) ?? 'pendiente';
+                        $solicitud->status = $previousStage;
+                        $solicitud->to_gerencia_id = $this->getGerenciaIdForStage($previousStage);
+                    }
+
+                    $solicitud->save();
+
+                    $this->createStatusLog(
+                        $solicitud,
+                        'reject_stage',
+                        $solicitud->status,
+                        $data['justification'],
+                        $attachmentPath
+                    );
+                    break;
+
+                case 'compras_approve':
+                    if (!in_array($solicitud->status, ['compras', 'normalizacion_final'], true)) {
+                        throw ValidationException::withMessages([
+                            'action' => 'La acción seleccionada no es válida para el estatus actual.',
+                        ]);
+                    }
+
+                    $this->ensureRoleForStage('compras', $role);
+
+                    $approvedNow = (int) ($data['approved_quantity'] ?? 0);
+                    if ($approvedNow <= 0) {
+                        throw ValidationException::withMessages([
+                            'approved_quantity' => 'Debes indicar la cantidad aprobada.',
+                        ]);
+                    }
+
+                    $remaining = $solicitud->quantity - $solicitud->approved_quantity;
+                    if ($remaining <= 0) {
+                        throw ValidationException::withMessages([
+                            'approved_quantity' => 'Ya se aprobó la cantidad total solicitada.',
+                        ]);
+                    }
+
+                    if ($approvedNow > $remaining) {
+                        throw ValidationException::withMessages([
+                            'approved_quantity' => 'La cantidad aprobada excede la cantidad pendiente.',
                         ]);
                     }
 
                     if ($inventory) {
-                        $this->consumeInventory($inventory, $solicitud);
+                        $this->consumeInventory($inventory, $approvedNow);
                     }
-                    $solicitud->status = 'aprobado';
+
+                    $solicitud->approved_quantity += $approvedNow;
+                    $solicitud->status = 'normalizacion_final';
+                    $solicitud->to_gerencia_id = $this->getGerenciaIdForStage('normalizacion_final');
                     $solicitud->save();
-                    $this->createStatusLog($solicitud, 'final_approved', 'aprobado', $data['justification']);
+
+                    $this->createStatusLog(
+                        $solicitud,
+                        'compras_approve',
+                        'normalizacion_final',
+                        $data['justification'],
+                        $attachmentPath,
+                        $approvedNow
+                    );
                     break;
 
-                case 'reject_final':
-                    $this->assertCanFinalize($role, $solicitud);
-                    if ($inventory) {
-                        $this->releaseReservation($inventory, $solicitud);
+                case 'compras_reject':
+                    if (!in_array($solicitud->status, ['compras', 'normalizacion_final'], true)) {
+                        throw ValidationException::withMessages([
+                            'action' => 'La acción seleccionada no es válida para el estatus actual.',
+                        ]);
                     }
-                    $solicitud->status = 'rechazado';
-                    $solicitud->destination_decision = 'rechazado';
-                    $solicitud->destination_decision_by = $user->id;
-                    $solicitud->destination_decision_at = now();
-                    $solicitud->destination_justification = $data['justification'];
+
+                    $this->ensureRoleForStage('compras', $role);
+
+                    $solicitud->status = 'administracion';
+                    $solicitud->to_gerencia_id = $this->getGerenciaIdForStage('administracion');
                     $solicitud->save();
-                    $this->createStatusLog($solicitud, 'final_rejected', 'rechazado', $data['justification']);
+
+                    $this->createStatusLog(
+                        $solicitud,
+                        'compras_reject',
+                        'administracion',
+                        $data['justification'],
+                        $attachmentPath
+                    );
+                    break;
+
+                case 'finalize_order':
+                    if ($solicitud->status !== 'normalizacion_final') {
+                        throw ValidationException::withMessages([
+                            'action' => 'La solicitud debe estar en Normalización para finalizar la orden.',
+                        ]);
+                    }
+
+                    $this->ensureRoleForStage('normalizacion_final', $role);
+
+                    if ($solicitud->approved_quantity < $solicitud->quantity) {
+                        throw ValidationException::withMessages([
+                            'action' => 'Aún quedan cantidades pendientes por aprobar.',
+                        ]);
+                    }
+
+                    $solicitud->status = 'aprobado';
+                    $solicitud->to_gerencia_id = null;
+                    $solicitud->save();
+
+                    $this->createStatusLog(
+                        $solicitud,
+                        'finalize_order',
+                        'aprobado',
+                        $data['justification'],
+                        $attachmentPath
+                    );
                     break;
             }
 
             DB::commit();
+
             return back()->with('success', 'Solicitud actualizada correctamente');
         } catch (ValidationException $e) {
             DB::rollBack();
+            if ($attachmentPath) {
+                Storage::disk('public')->delete($attachmentPath);
+            }
             throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($attachmentPath) {
+                Storage::disk('public')->delete($attachmentPath);
+            }
             return back()->withErrors(['general' => 'Ocurrió un error al actualizar la solicitud']);
         }
     }
 
-    // Generar PDF
     public function generatePDF($id)
     {
         $solicitud = Solicitud::with(['product', 'fromGerencia', 'toGerencia', 'statusLogs.user'])->findOrFail($id);
@@ -285,21 +413,18 @@ class RequestController extends Controller
             return 'super_admin';
         }
 
-        $gerenciaName = optional($user->gerencia)->name;
-
-        if ($user->hasRole('admin')) {
-            if ($gerenciaName === 'Normalización') {
-                return 'normalizacion';
-            }
-            if ($gerenciaName === 'VGO') {
-                return 'vgo';
-            }
-            if ($gerenciaName === 'Administración') {
-                return 'administracion';
-            }
+        if (!$user->hasRole('admin')) {
+            return 'viewer';
         }
 
-        return 'viewer';
+        return match (optional($user->gerencia)->name) {
+            'Normalización' => 'normalizacion',
+            'VP. Mantenimiento' => 'vp_mantenimiento',
+            'VP. Soporte' => 'vp_soporte',
+            'Administración' => 'administracion',
+            'Compras' => 'compras',
+            default => 'viewer',
+        };
     }
 
     protected function getGerenciaIdByName(string $name): ?int
@@ -315,106 +440,106 @@ class RequestController extends Controller
         return $cache[$name];
     }
 
-    protected function assertCanTransfer(string $role, Solicitud $solicitud, string $targetStatus): void
+    protected function getNextStage(string $currentStage): ?string
     {
-        if ($solicitud->status === $targetStatus) {
-            throw ValidationException::withMessages([
-                'action' => 'La solicitud ya está asignada a la gerencia seleccionada.',
-            ]);
+        $index = array_search($currentStage, $this->workflowOrder, true);
+        if ($index === false) {
+            return null;
         }
 
+        return $this->workflowOrder[$index + 1] ?? null;
+    }
+
+    protected function getPreviousStage(string $currentStage): ?string
+    {
+        $index = array_search($currentStage, $this->workflowOrder, true);
+        if ($index === false || $index === 0) {
+            return null;
+        }
+
+        return $this->workflowOrder[$index - 1] ?? null;
+    }
+
+    protected function getGerenciaIdForStage(string $stage): ?int
+    {
+        $name = $this->stageGerencias[$stage] ?? null;
+        return $name ? $this->getGerenciaIdByName($name) : null;
+    }
+
+    protected function ensureRoleForStage(string $stage, string $role): void
+    {
         if ($role === 'super_admin') {
             return;
         }
 
-        $canTransfer = match ($role) {
-            'normalizacion' => $solicitud->status === 'pendiente',
-            'vgo' => $solicitud->status === 'vgo',
-            'administracion' => $solicitud->status === 'administracion',
-            default => false,
+        $expectedRole = match ($stage) {
+            'pendiente', 'normalizacion_final' => 'normalizacion',
+            'vp_mantenimiento' => 'vp_mantenimiento',
+            'vp_soporte' => 'vp_soporte',
+            'administracion' => 'administracion',
+            'compras' => 'compras',
+            default => null,
         };
 
-        if (!$canTransfer) {
+        if ($expectedRole === null || $expectedRole !== $role) {
             throw ValidationException::withMessages([
-                'action' => 'No tienes permisos para transferir esta solicitud.',
+                'action' => 'No tienes permisos para realizar esta acción.',
             ]);
         }
     }
 
-    protected function assertCanApproveDestination(string $role, Solicitud $solicitud): void
+    protected function reserveInventory(Inventory $inventory, int $amount): void
     {
-        $allowedStatuses = ['vgo', 'administracion'];
-
-        if (!in_array($solicitud->status, $allowedStatuses, true)) {
-            throw ValidationException::withMessages([
-                'action' => 'La solicitud debe estar en revisión por VGO o Administración.',
-            ]);
-        }
-
-        if ($role === 'super_admin') {
-            return;
-        }
-
-        if ($role === 'vgo' && $solicitud->status === 'vgo') {
-            return;
-        }
-
-        if ($role === 'administracion' && $solicitud->status === 'administracion') {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'action' => 'No tienes permisos para actualizar esta solicitud.',
-        ]);
-    }
-
-    protected function assertCanFinalize(string $role, Solicitud $solicitud): void
-    {
-        if (!in_array($role, ['super_admin', 'normalizacion'], true)) {
-            throw ValidationException::withMessages([
-                'action' => 'No tienes permisos para finalizar esta solicitud.',
-            ]);
-        }
-
-        if (!in_array($solicitud->status, ['vgo', 'administracion', 'pendiente'], true)) {
-            throw ValidationException::withMessages([
-                'action' => 'La solicitud no puede ser finalizada en el estatus actual.',
-            ]);
-        }
-    }
-
-    protected function releaseReservation(Inventory $inventory, Solicitud $solicitud): void
-    {
-        $inventory->reserved_quantity = max(0, $inventory->reserved_quantity - $solicitud->quantity);
+        $inventory->reserved_quantity += $amount;
         $inventory->save();
     }
 
-    protected function consumeInventory(Inventory $inventory, Solicitud $solicitud): void
+    protected function releaseReservation(Inventory $inventory, int $amount): void
     {
-        if ($inventory->reserved_quantity < $solicitud->quantity) {
-            throw ValidationException::withMessages([
-                'action' => 'La cantidad reservada es inferior a la requerida para aprobar la solicitud.',
-            ]);
-        }
-
-        if ($inventory->quantity < $solicitud->quantity) {
-            throw ValidationException::withMessages([
-                'action' => 'El inventario disponible es insuficiente para aprobar la solicitud.',
-            ]);
-        }
-
-        $inventory->quantity = max(0, $inventory->quantity - $solicitud->quantity);
-        $inventory->reserved_quantity -= $solicitud->quantity;
+        $inventory->reserved_quantity = max(0, $inventory->reserved_quantity - $amount);
         $inventory->save();
     }
 
-    protected function createStatusLog(Solicitud $solicitud, string $action, string $status, ?string $justification = null): void
+    protected function consumeInventory(Inventory $inventory, int $amount): void
     {
+        if ($amount <= 0) {
+            throw ValidationException::withMessages([
+                'approved_quantity' => 'La cantidad debe ser mayor a 0.',
+            ]);
+        }
+
+        if ($inventory->reserved_quantity < $amount) {
+            throw ValidationException::withMessages([
+                'approved_quantity' => 'La cantidad reservada es inferior a la solicitada.',
+            ]);
+        }
+
+        if ($inventory->quantity < $amount) {
+            throw ValidationException::withMessages([
+                'approved_quantity' => 'El inventario disponible es insuficiente.',
+            ]);
+        }
+
+        $inventory->quantity = max(0, $inventory->quantity - $amount);
+        $inventory->reserved_quantity = max(0, $inventory->reserved_quantity - $amount);
+        $inventory->save();
+    }
+
+    protected function createStatusLog(
+        Solicitud $solicitud,
+        string $action,
+        string $status,
+        ?string $justification = null,
+        ?string $attachmentPath = null,
+        ?int $approvedQuantity = null
+    ): void {
         SolicitudStatusLog::create([
             'solicitud_id' => $solicitud->id,
             'status' => $status,
             'action' => $action,
             'justification' => $justification,
+            'attachment_path' => $attachmentPath,
+            'approved_quantity' => $approvedQuantity,
             'changed_by' => Auth::id(),
         ]);
     }

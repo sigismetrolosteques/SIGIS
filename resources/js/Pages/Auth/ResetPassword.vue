@@ -3,6 +3,8 @@ import { useForm, Head } from '@inertiajs/vue3'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
 import InputError from '@/Components/InputError.vue'
+import BackButton from '@/Components/BackButton.vue'
+import { EnvelopeIcon } from '@heroicons/vue/24/outline'
 import { ref, computed } from 'vue'
 
 const props = defineProps({
@@ -70,6 +72,9 @@ const submit = () => {
     </div>
 
     <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
+      <div class="mb-4">
+        <BackButton fallbackRoute="/" />
+      </div>
       <div class="text-center">
         <h2 class="text-3xl font-bold text-red-600">Restablecer Contraseña</h2>
         <p class="mt-2 text-sm text-gray-600">
@@ -83,7 +88,10 @@ const submit = () => {
         <!-- Email -->
         <div>
           <InputLabel for="email" value="Correo electrónico" />
-          <TextInput id="email" type="email" v-model="form.email" class="mt-1 block w-full" required readonly />
+          <div class="relative mt-1">
+            <EnvelopeIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <TextInput id="email" type="email" v-model="form.email" class="block w-full pl-10" required readonly placeholder="Ejemplo: usuario@metro.gob.ve" />
+          </div>
           <InputError :message="form.errors.email" class="mt-1" />
         </div>
 
@@ -92,7 +100,7 @@ const submit = () => {
           <InputLabel for="password" value="Contraseña" />
           <TextInput id="password" type="password" v-model="form.password" @focus="passwordFocus = true"
             @blur="passwordFocus = false" @input="validatePassword(form.password)" class="mt-1 block w-full" required
-            autocomplete="new-password" />
+            autocomplete="new-password" placeholder="Ejemplo: P@ssw0rd123" />
           <InputError :message="form.errors.password" class="mt-1" />
 
           <!-- Password Requirements -->
@@ -127,7 +135,7 @@ const submit = () => {
         <div>
           <InputLabel for="password_confirmation" value="Confirmar Contraseña" />
           <TextInput id="password_confirmation" type="password" v-model="form.password_confirmation"
-            class="mt-1 block w-full" required autocomplete="new-password" />
+            class="mt-1 block w-full" required autocomplete="new-password" placeholder="Confirma la contraseña" />
           <InputError :message="form.errors.password_confirmation" class="mt-1" />
 
           <div v-if="form.password_confirmation" class="mt-1 text-xs"

@@ -8,7 +8,13 @@ use App\Models\Gerencia;
 
 class UserGerenciaSeeder extends Seeder
 {
-    protected array $adminGerencias = ['Administración', 'VGO', 'Normalización'];
+    protected array $adminGerencias = [
+        'Administración',
+        'Normalización',
+        'VP. Mantenimiento',
+        'VP. Soporte',
+        'Compras',
+    ];
 
     public function run(): void
     {

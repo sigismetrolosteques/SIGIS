@@ -12,8 +12,19 @@ class Product extends Model
     protected $fillable = [
         'code',
         'name',
+        'sub_area',
+        'ubicaciones',
+        'tipo_material',
+        'marcas_sugeridas',
+        'modelo',
+        'dimensiones',
+        'especificaciones_tecnicas',
         'image',
         'description',
+    ];
+
+    protected $casts = [
+        'ubicaciones' => 'array',
     ];
 
     public function inventories()

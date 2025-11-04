@@ -2,10 +2,30 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link } from '@inertiajs/vue3';
 import { PencilIcon } from '@heroicons/vue/24/outline';
+import { computed } from 'vue';
 
 const props = defineProps({
   inventory: Object,
   canManage: Boolean,
+});
+
+const tipoMaterialLabel = computed(() => {
+  const map = {
+    equipos: 'Equipos',
+    herramientas: 'Herramientas',
+    consumibles: 'Consumibles',
+  };
+
+  return map[props.inventory?.product?.tipo_material] ?? 'Sin clasificación';
+});
+
+const ubicacionesLabel = computed(() => {
+  const ubicaciones = props.inventory?.product?.ubicaciones;
+  if (Array.isArray(ubicaciones) && ubicaciones.length > 0) {
+    return ubicaciones.join(', ');
+  }
+
+  return 'Sin ubicación asignada';
 });
 </script>
 
@@ -46,6 +66,18 @@ const props = defineProps({
           <div>
             <p class="text-sm text-gray-500 uppercase">Código</p>
             <p class="font-mono text-gray-800">{{ inventory.product?.code ?? 'N/D' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 uppercase">Sub-Área</p>
+            <p class="text-gray-800">{{ inventory.product?.sub_area || 'Sin sub-área registrada' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 uppercase">Tipo de Material</p>
+            <p class="text-gray-800">{{ tipoMaterialLabel }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 uppercase">Ubicaciones del producto</p>
+            <p class="text-gray-800">{{ ubicacionesLabel }}</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>

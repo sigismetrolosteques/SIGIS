@@ -18,17 +18,9 @@ const form = useForm({
   to: props.filters.to || '',
   status: props.filters.status || '',
   from_gerencia_id: props.filters.from_gerencia_id || '',
-  to_gerencia_id: props.filters.to_gerencia_id || '',
   product_id: props.filters.product_id || '',
   per_page: props.filters.per_page || 15,
 });
-
-const allowedDestinationNames = ['Administración', 'VGO'];
-const destinationGerencias = computed(() =>
-  (props.gerencias || []).filter(g =>
-    allowedDestinationNames.includes(g.name ?? g.nombre ?? '')
-  )
-);
 
 function formatDate(value) {
   if (!value) return '-';
@@ -49,7 +41,6 @@ function buildParamsObject() {
     to: form.to || '',
     status: form.status || '',
     from_gerencia_id: form.from_gerencia_id || '',
-    to_gerencia_id: form.to_gerencia_id || '',
     product_id: form.product_id || '',
     per_page: form.per_page || '',
   };
@@ -63,7 +54,7 @@ function applyFilters() {
 
 // Reset filtros
 function resetFilters() {
-  form.reset('from', 'to', 'status', 'from_gerencia_id', 'to_gerencia_id', 'product_id', 'per_page');
+  form.reset('from', 'to', 'status', 'from_gerencia_id', 'product_id', 'per_page');
   router.get(route('reportes.solicitudes'), {}, { preserveState: true });
 }
 
@@ -91,7 +82,7 @@ function renderCharts(solicitudesData = []) {
   destroyCharts();
 
   // Estado
-  const pendientes = solicitudesData.filter(s => s.status === 'pendiente').length;
+  const enProceso = solicitudesData.filter(s => !['aprobado', 'rechazado'].includes(s.status)).length;
   const aprobados = solicitudesData.filter(s => s.status === 'aprobado').length;
   const rechazados = solicitudesData.filter(s => s.status === 'rechazado').length;
 
@@ -99,8 +90,8 @@ function renderCharts(solicitudesData = []) {
     statusChart = new Chart(statusChartRef.value, {
       type: 'doughnut',
       data: {
-        labels: ['Pendiente', 'Aprobado', 'Rechazado'],
-        datasets: [{ data: [pendientes, aprobados, rechazados], backgroundColor: ['#F59E0B','#10B981','#EF4444'] }]
+        labels: ['En proceso', 'Aprobado', 'Rechazado'],
+        datasets: [{ data: [enProceso, aprobados, rechazados], backgroundColor: ['#F59E0B','#10B981','#EF4444'] }]
       },
       options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
@@ -115,17 +106,13 @@ function renderCharts(solicitudesData = []) {
 
   if (productChartRef.value) {
     productChart = new Chart(productChartRef.value, {
-      type: 'line',
+      type: 'bar',
       data: {
         labels: Object.keys(byProduct),
         datasets: [{
           label: 'Solicitudes',
           data: Object.values(byProduct),
-          fill: false,
-          tension: 0.25,
-          borderWidth: 2,
-          borderColor: '#3B82F6',
-          pointRadius: 4
+          backgroundColor: '#3B82F6'
         }]
       },
       options: {
@@ -174,7 +161,12 @@ onBeforeUnmount(() => destroyCharts());
             <label class="block text-sm mb-1">Estado</label>
             <select v-model="form.status" class="w-full border rounded px-2 py-1">
               <option value="">-- Todos --</option>
-              <option value="pendiente">Pendiente</option>
+              <option value="pendiente">Normalización</option>
+              <option value="vp_mantenimiento">VP. Mantenimiento</option>
+              <option value="vp_soporte">VP. Soporte</option>
+              <option value="administracion">Administración</option>
+              <option value="compras">Compras</option>
+              <option value="normalizacion_final">Normalización (Entrega)</option>
               <option value="aprobado">Aprobado</option>
               <option value="rechazado">Rechazado</option>
             </select>
@@ -189,18 +181,10 @@ onBeforeUnmount(() => destroyCharts());
           </div>
 
           <div>
-            <label class="block text-sm mb-1">De Gerencia</label>
+            <label class="block text-sm mb-1">Destino</label>
             <select v-model="form.from_gerencia_id" class="w-full border rounded px-2 py-1">
-              <option value="">-- Todas --</option>
+              <option value="">-- Todos --</option>
               <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1">A Gerencia</label>
-            <select v-model="form.to_gerencia_id" class="w-full border rounded px-2 py-1">
-              <option value="">-- Todas --</option>
-              <option v-for="g in destinationGerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
             </select>
           </div>
 
@@ -228,8 +212,8 @@ onBeforeUnmount(() => destroyCharts());
           <div class="text-2xl font-bold">{{ totales.total }}</div>
         </div>
         <div class="bg-white p-4 rounded shadow">
-          <div class="text-sm text-gray-500">Pendiente</div>
-          <div class="text-2xl font-bold">{{ totales.pendiente }}</div>
+          <div class="text-sm text-gray-500">En proceso</div>
+          <div class="text-2xl font-bold">{{ totales.en_proceso }}</div>
         </div>
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Aprobado</div>
@@ -256,7 +240,7 @@ onBeforeUnmount(() => destroyCharts());
             <tr>
               <th class="py-2 px-3 text-left">Código</th>
               <th class="py-2 px-3 text-left">Producto</th>
-              <th class="py-2 px-3 text-left">De</th>
+              <th class="py-2 px-3 text-left">Destino</th>
               <th class="py-2 px-3 text-left">Cantidad</th>
               <th class="py-2 px-3 text-left">Estado</th>
               <th class="py-2 px-3 text-left">Fecha</th>

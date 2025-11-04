@@ -2,6 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { LockClosedIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/vue/24/outline';
 import Modal from '@/Components/Modal.vue';
+import BackButton from '@/Components/BackButton.vue';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -106,103 +107,139 @@ const closeModal = () => {
 <template>
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
 
-        <div class="w-full max-w-2xl bg-white rounded-xl shadow-lg overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gray-500 p-6 text-white">
-                <div class="flex items-center justify-between">
-                    <img src="/img/Metro_Los_Teques_Logo_Boceto.svg.png" alt="Logo Metro Los Teques"
-                        class="mx-auto h-auto w-[130px]">
-                    <div>
-                        <h1 class="text-2xl font-bold">Configuración Inicial de Seguridad</h1>
-                        <p class="text-blue-100">Complete su perfil de seguridad</p>
-                    </div>
-                    <div class="bg-gray-500 rounded-full p-3">
-                        <LockClosedIcon class="h-6 w-6" />
-                    </div>
-                </div>
-            </div>
+        <div class="w-full max-w-2xl space-y-4">
+            <BackButton fallbackRoute="/" />
 
-            <!-- Contenido -->
-            <div class="p-8">
-                <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-gray-800">Bienvenido, {{ email }}</h2>
-                    <p class="text-gray-600">Por favor establezca una nueva contraseña y configure sus preguntas de
-                        seguridad.</p>
-                </div>
-
-                <form @submit.prevent="submit" class="space-y-6">
-                    <!-- Contraseña -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
-                        <input type="password" v-model="form.password" @input="validatePassword" required
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
-                            placeholder="Ingrese su nueva contraseña" />
-                        <div class="mt-2 space-y-1">
-                            <div v-for="(req, index) in passwordRequirements" :key="index" class="flex items-center">
-                                <CheckCircleIcon v-if="req.valid" class="h-4 w-4 text-green-500 mr-2" />
-                                <ExclamationCircleIcon v-else class="h-4 w-4 text-gray-400 mr-2" />
-                                <span :class="{ 'text-gray-500': !req.valid, 'text-green-600': req.valid }"
-                                    class="text-sm">
-                                    {{ req.text }}
-                                </span>
-                            </div>
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gray-500 p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <img src="/img/Metro_Los_Teques_Logo_Boceto.svg.png" alt="Logo Metro Los Teques"
+                            class="mx-auto h-auto w-[130px]">
+                        <div>
+                            <h1 class="text-2xl font-bold">Configuración Inicial de Seguridad</h1>
+                            <p class="text-blue-100">Complete su perfil de seguridad</p>
+                        </div>
+                        <div class="bg-gray-500 rounded-full p-3">
+                            <LockClosedIcon class="h-6 w-6" />
                         </div>
                     </div>
+                </div>
 
-                    <!-- Confirmar Contraseña -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
-                        <input type="password" v-model="form.password_confirmation" required
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
-                            placeholder="Confirme su nueva contraseña" />
+                <!-- Contenido -->
+                <div class="p-8">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-gray-800">Bienvenido, {{ email }}</h2>
+                        <p class="text-gray-600">
+                            Por favor establezca una nueva contraseña y configure sus preguntas de seguridad.
+                        </p>
                     </div>
 
-                    <!-- Preguntas de Seguridad -->
-                    <div class="space-y-6">
-                        <h3 class="text-lg font-medium text-gray-900">Preguntas de Seguridad</h3>
-                        <p class="text-sm text-gray-500">Estas preguntas ayudarán a verificar tu identidad en caso de
-                            que olvides tu contraseña.</p>
-
-                        <div v-for="(question, index) in form.security_questions" :key="index"
-                            class="space-y-3 p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Pregunta {{ index + 1 }}</label>
-                                <select v-model="question.question"
-                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition bg-white">
-                                    <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu
-                                        primera mascota?</option>
-                                    <option value="¿En qué ciudad naciste?">¿En qué ciudad naciste?</option>
-                                    <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
-                                    <option value="¿Cuál era el nombre de tu escuela primaria?">¿Cuál era el nombre de
-                                        tu escuela primaria?</option>
-                                    <option value="¿Cuál es el nombre de tu madre?">¿Cuál es el nombre de tu madre?
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Respuesta</label>
-                                <input type="text" v-model="question.answer" required
-                                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
-                                    :placeholder="'Ingrese respuesta para: ' + question.question" />
+                    <form @submit.prevent="submit" class="space-y-6">
+                        <!-- Contraseña -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Nueva Contraseña</label>
+                            <input
+                                type="password"
+                                v-model="form.password"
+                                @input="validatePassword"
+                                required
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
+                                placeholder="Ejemplo: P@ssw0rd123"
+                            />
+                            <div class="mt-2 space-y-1">
+                                <div
+                                    v-for="(req, index) in passwordRequirements"
+                                    :key="index"
+                                    class="flex items-center"
+                                >
+                                    <CheckCircleIcon v-if="req.valid" class="h-4 w-4 text-green-500 mr-2" />
+                                    <ExclamationCircleIcon v-else class="h-4 w-4 text-gray-400 mr-2" />
+                                    <span
+                                        :class="{ 'text-gray-500': !req.valid, 'text-green-600': req.valid }"
+                                        class="text-sm"
+                                    >
+                                        {{ req.text }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Botón de Envío -->
-                    <div class="pt-4">
-                        <button type="submit" :disabled="form.processing"
-                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-75 disabled:cursor-not-allowed">
-                            <span v-if="form.processing">Guardando configuración...</span>
-                            <span v-else>Guardar Configuración de Seguridad</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        <!-- Confirmar Contraseña -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
+                            <input
+                                type="password"
+                                v-model="form.password_confirmation"
+                                required
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
+                                placeholder="Confirme la contraseña"
+                            />
+                        </div>
 
-            <!-- Footer -->
-            <div class="bg-gray-50 px-6 py-4 text-center">
-                <p class="text-xs text-gray-500">Al completar este formulario, aceptas nuestras políticas de seguridad.
-                </p>
+                        <!-- Preguntas de Seguridad -->
+                        <div class="space-y-6">
+                            <h3 class="text-lg font-medium text-gray-900">Preguntas de Seguridad</h3>
+                            <p class="text-sm text-gray-500">
+                                Estas preguntas ayudarán a verificar tu identidad en caso de que olvides tu contraseña.
+                            </p>
+
+                            <div
+                                v-for="(question, index) in form.security_questions"
+                                :key="index"
+                                class="space-y-3 p-4 bg-gray-50 rounded-lg"
+                            >
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Pregunta {{ index + 1 }}
+                                    </label>
+                                    <select
+                                        v-model="question.question"
+                                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition bg-white"
+                                    >
+                                        <option value="¿Cuál es el nombre de tu primera mascota?">
+                                            ¿Cuál es el nombre de tu primera mascota?
+                                        </option>
+                                        <option value="¿En qué ciudad naciste?">¿En qué ciudad naciste?</option>
+                                        <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
+                                        <option value="¿Cuál era el nombre de tu escuela primaria?">
+                                            ¿Cuál era el nombre de tu escuela primaria?
+                                        </option>
+                                        <option value="¿Cuál es el nombre de tu madre?">¿Cuál es el nombre de tu madre?</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Respuesta</label>
+                                    <input
+                                        type="text"
+                                        v-model="question.answer"
+                                        required
+                                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition"
+                                        :placeholder="'Ingrese respuesta para: ' + question.question"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botón de Envío -->
+                        <div class="pt-4">
+                            <button
+                                type="submit"
+                                :disabled="form.processing"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-75 disabled:cursor-not-allowed"
+                            >
+                                <span v-if="form.processing">Guardando configuración...</span>
+                                <span v-else>Guardar Configuración de Seguridad</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-6 py-4 text-center">
+                    <p class="text-xs text-gray-500">Al completar este formulario, aceptas nuestras políticas de seguridad.
+                    </p>
+                </div>
             </div>
         </div>
      <Modal :show="showModal" @close="closeModal" maxWidth="md">

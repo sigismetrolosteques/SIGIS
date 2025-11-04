@@ -3,6 +3,7 @@ import { useForm, Head } from '@inertiajs/vue3'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
 import InputError from '@/Components/InputError.vue'
+import BackButton from '@/Components/BackButton.vue'
 
 const props = defineProps({
   securityQuestions: Array,
@@ -44,6 +45,9 @@ const submit = () => {
         </div>
 
         <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
+            <div class="mb-4">
+                <BackButton fallbackRoute="/" />
+            </div>
             <div class="text-center">
                 <h2 class="text-3xl font-bold text-red-600">Verificación de Seguridad</h2>
                 <p class="mt-2 text-sm text-gray-600">
@@ -70,6 +74,7 @@ const submit = () => {
                         class="mt-1 block w-full" 
                         required
                         autofocus
+                        placeholder="Escribe tu respuesta"
                     />
                     <InputError :message="form.errors.answer_1" class="mt-1" />
                 </div>
@@ -82,6 +87,7 @@ const submit = () => {
                         v-model="form.answer_2" 
                         class="mt-1 block w-full" 
                         required
+                        placeholder="Escribe tu respuesta"
                     />
                     <InputError :message="form.errors.answer_2" class="mt-1" />
                 </div>
@@ -94,6 +100,7 @@ const submit = () => {
                         v-model="form.answer_3" 
                         class="mt-1 block w-full" 
                         required
+                        placeholder="Escribe tu respuesta"
                     />
                     <InputError :message="form.errors.answer_3" class="mt-1" />
                 </div>

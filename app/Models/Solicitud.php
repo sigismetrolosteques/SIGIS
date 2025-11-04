@@ -18,15 +18,18 @@ class Solicitud extends Model
         'product_id',
         'inventory_id',
         'quantity',
+        'approved_quantity',
         'created_by',
         'from_gerencia_id',
         'to_gerencia_id',
         'status',
         'description',
-        'destination_decision',
-        'destination_decision_by',
-        'destination_decision_at',
-        'destination_justification',
+        'return_date',
+    ];
+
+    protected $casts = [
+        'return_date' => 'date',
+        'approved_quantity' => 'integer',
     ];
 
     // Relaciones
@@ -49,11 +52,6 @@ class Solicitud extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function destinationDecisionUser()
-    {
-        return $this->belongsTo(User::class, 'destination_decision_by');
     }
 
     public function statusLogs()

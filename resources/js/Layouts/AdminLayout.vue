@@ -77,7 +77,7 @@ const mainClasses = computed(() => [
     >
       <div class="h-20 flex items-center justify-center border-b border-red-500">
         <h1 class="text-2xl font-bold text-white tracking-wider font-mono">
-          ADMIN<span class="text-gray-300">PANEL</span>
+          SIGIS
         </h1>
       </div>
 

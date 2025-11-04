@@ -85,10 +85,23 @@
             <span class="label">Destino:</span>
             <span class="value">{{ $solicitud->toGerencia->name ?? '-' }}</span>
         </div>
+        @php
+            $statusLabel = \Illuminate\Support\Str::of($solicitud->status)->replace('_', ' ')->title();
+        @endphp
         <div class="section">
             <span class="label">Estado:</span>
-            <span class="value">{{ ucfirst($solicitud->status) }}</span>
+            <span class="value">{{ $statusLabel }}</span>
         </div>
+        <div class="section">
+            <span class="label">Aprobado:</span>
+            <span class="value">{{ $solicitud->approved_quantity }} / {{ $solicitud->quantity }}</span>
+        </div>
+        @if($solicitud->return_date)
+        <div class="section">
+            <span class="label">Devolución:</span>
+            <span class="value">{{ \Carbon\Carbon::parse($solicitud->return_date)->format('d/m/Y') }}</span>
+        </div>
+        @endif
         <div class="section">
             <span class="label">Descripción:</span>
             <span class="value">{{ $solicitud->description ?? '-' }}</span>

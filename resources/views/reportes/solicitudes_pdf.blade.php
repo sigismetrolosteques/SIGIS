@@ -38,7 +38,7 @@
 
   <div class="summary">
     <div class="card"><strong>Total:</strong> {{ $totales['total'] ?? 0 }}</div>
-    <div class="card"><strong>Pendiente:</strong> {{ $totales['pendiente'] ?? 0 }}</div>
+    <div class="card"><strong>En proceso:</strong> {{ $totales['en_proceso'] ?? 0 }}</div>
     <div class="card"><strong>Aprobado:</strong> {{ $totales['aprobado'] ?? 0 }}</div>
     <div class="card"><strong>Rechazado:</strong> {{ $totales['rechazado'] ?? 0 }}</div>
   </div>
@@ -57,7 +57,7 @@
           <td>{{ optional($s->fromGerencia)->name }}</td>
           <td>{{ optional($s->toGerencia)->name }}</td>
           <td>{{ $s->quantity }}</td>
-          <td>{{ ucfirst($s->status) }}</td>
+          <td>{{ \Illuminate\Support\Str::of($s->status)->replace('_', ' ')->title() }}</td>
           <td>{{ optional($s->created_at)->toDateTimeString() }}</td>
         </tr>
       @endforeach

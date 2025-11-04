@@ -3,6 +3,8 @@ import { useForm, Head } from '@inertiajs/vue3'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
 import InputError from '@/Components/InputError.vue'
+import BackButton from '@/Components/BackButton.vue'
+import { EnvelopeIcon } from '@heroicons/vue/24/outline'
 
 const form = useForm({
     email: '',
@@ -43,6 +45,9 @@ const submit = () => {
 
         <div
             class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
+            <div class="mb-4">
+                <BackButton fallbackRoute="/" />
+            </div>
             <div class="text-center">
                 <h2 class="text-3xl font-bold text-red-600">¿Olvidaste tu contraseña?</h2>
                 <p class="mt-2 text-sm text-gray-600">
@@ -54,8 +59,18 @@ const submit = () => {
                 <!-- Email -->
                 <div>
                     <InputLabel for="email" value="Correo electrónico" />
-                    <TextInput id="email" type="email" v-model="form.email" class="mt-1 block w-full" required
-                        autofocus />
+                    <div class="relative mt-1">
+                        <EnvelopeIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <TextInput
+                            id="email"
+                            type="email"
+                            v-model="form.email"
+                            class="block w-full pl-10"
+                            required
+                            autofocus
+                            placeholder="Ejemplo: usuario@metro.gob.ve"
+                        />
+                    </div>
                     <InputError :message="form.errors.email" class="mt-1" />
                 </div>
                 <!-- Botón -->

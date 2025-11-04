@@ -6,10 +6,10 @@ import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
 import {
   EyeIcon,
-  ArrowsRightLeftIcon,
   CheckCircleIcon,
   XCircleIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  PaperClipIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -35,10 +35,12 @@ const statusOptions = computed(() => props.workflow?.status_options ?? {});
 
 const isSuperAdmin = computed(() => workflowRole.value === 'super_admin');
 const isNormalizacion = computed(() => ['super_admin', 'normalizacion'].includes(workflowRole.value));
-const isVgo = computed(() => ['super_admin', 'vgo'].includes(workflowRole.value));
+const isVpMantenimiento = computed(() => ['super_admin', 'vp_mantenimiento'].includes(workflowRole.value));
+const isVpSoporte = computed(() => ['super_admin', 'vp_soporte'].includes(workflowRole.value));
 const isAdministracion = computed(() => ['super_admin', 'administracion'].includes(workflowRole.value));
+const isCompras = computed(() => ['super_admin', 'compras'].includes(workflowRole.value));
 const isViewer = computed(() => workflowRole.value === 'viewer');
-const showOriginColumn = computed(() => isSuperAdmin.value || isNormalizacion.value || isAdministracion.value);
+const showOriginColumn = computed(() => !isViewer.value);
 
 const showDetalleModal = ref(false);
 const detalleSolicitud = ref(null);
@@ -54,17 +56,21 @@ const actionModal = ref({
 const actionForm = useForm({
   action: '',
   justification: '',
+  approved_quantity: '',
+  attachment: null,
 });
 
+const attachmentInput = ref(null);
 const actionError = ref(null);
 const baseActionClass = 'inline-flex h-10 w-10 items-center justify-center rounded-full transition text-xs font-medium';
 const finalStatuses = ['aprobado', 'rechazado'];
 
 function formatStatus(status, viewerMask = false) {
-  if (viewerMask && ['vgo', 'administracion'].includes(status)) {
-    return 'En revisión';
+  const labels = statusOptions.value || {};
+  if (viewerMask && ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'compras', 'normalizacion_final'].includes(status)) {
+    return labels[status] || 'En revisión';
   }
-  return statusOptions.value[status] ?? status;
+  return labels[status] ?? status;
 }
 
 function formatDate(dateString) {
@@ -79,6 +85,16 @@ function formatDate(dateString) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function formatShortDate(dateString) {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 function latestJustification(solicitud) {
   return solicitud.latest_status_log?.justification ?? 'Sin justificación';
 }
@@ -88,9 +104,16 @@ function statusBadgeClass(status) {
   switch (status) {
     case 'pendiente':
       return `${base} bg-yellow-100 text-yellow-800`;
-    case 'vgo':
+    case 'vp_mantenimiento':
+      return `${base} bg-indigo-100 text-indigo-600`;
+    case 'vp_soporte':
+      return `${base} bg-purple-100 text-purple-600`;
     case 'administracion':
-      return `${base} bg-blue-100 text-blue-800`;
+      return `${base} bg-blue-100 text-blue-700`;
+    case 'compras':
+      return `${base} bg-amber-100 text-amber-700`;
+    case 'normalizacion_final':
+      return `${base} bg-teal-100 text-teal-700`;
     case 'aprobado':
       return `${base} bg-green-100 text-green-800`;
     case 'rechazado':
@@ -129,13 +152,16 @@ function openDetalle(solicitud) {
 }
 
 const actionLabels = {
-  transfer_vgo: 'Transferir a VGO',
-  transfer_administracion: 'Transferir a Administración',
-  approve_destination: 'Aprobar',
-  reject_destination: 'Rechazar',
-  approve_final: 'Aprobar (Normalización)',
-  reject_final: 'Rechazar',
+  approve_stage: 'Aprobar etapa',
+  reject_stage: 'Rechazar etapa',
+  compras_approve: 'Aprobación de Compras',
+  compras_reject: 'Devolver a Administración',
+  finalize_order: 'Generar Orden de Entrega',
 };
+
+function getStatusLabel(status) {
+  return statusOptions.value?.[status] ?? status;
+}
 
 function openActionModal(solicitud, action) {
   actionModal.value = {
@@ -143,10 +169,17 @@ function openActionModal(solicitud, action) {
     solicitud,
     action,
     title: actionLabels[action] || 'Acción',
-    description: '',
+    description: getStatusLabel(solicitud.status),
   };
   actionForm.action = action;
   actionForm.justification = '';
+  actionForm.approved_quantity = action === 'compras_approve'
+    ? remainingQuantity(solicitud)
+    : '';
+  actionForm.attachment = null;
+  if (attachmentInput.value) {
+    attachmentInput.value.value = '';
+  }
   actionError.value = null;
 }
 
@@ -154,20 +187,40 @@ function closeActionModal() {
   actionModal.value.visible = false;
   actionModal.value.solicitud = null;
   actionForm.reset();
+  actionForm.attachment = null;
+  if (attachmentInput.value) {
+    attachmentInput.value.value = '';
+  }
   actionError.value = null;
+}
+
+function handleAttachmentChange(event) {
+  const [file] = event.target.files;
+  actionForm.attachment = file ?? null;
 }
 
 function submitAction() {
   if (!actionModal.value.solicitud) return;
 
-  actionForm.post(route('solicitudes.updateStatus', actionModal.value.solicitud.id), {
+  const payload = {
+    ...actionForm.data(),
+    approved_quantity: actionModal.value.action === 'compras_approve'
+      ? actionForm.approved_quantity
+      : null,
+  };
+
+  actionForm.transform(() => payload).post(route('solicitudes.updateStatus', actionModal.value.solicitud.id), {
     preserveScroll: true,
+    forceFormData: true,
     onSuccess: () => {
       successMessage.value = 'Solicitud actualizada correctamente';
       closeActionModal();
     },
     onError: (errors) => {
-      actionError.value = errors?.action || errors?.justification || 'No se pudo completar la acción.';
+      actionError.value = errors?.approved_quantity || errors?.attachment || errors?.justification || errors?.action || 'No se pudo completar la acción.';
+    },
+    onFinish: () => {
+      actionForm.transform(data => data);
     },
   });
 }
@@ -177,72 +230,87 @@ function openPDF(solicitud) {
   window.open(route('solicitudes.pdf', solicitud.id), '_blank');
 }
 
-function canTransferToVgo(solicitud) {
+function remainingQuantity(solicitud) {
+  const quantity = Number(solicitud.quantity) || 0;
+  const approved = Number(solicitud.approved_quantity) || 0;
+  return Math.max(0, quantity - approved);
+}
+
+function canApproveStage(solicitud) {
+  if (!solicitud || finalStatuses.includes(solicitud.status)) return false;
+  switch (solicitud.status) {
+    case 'pendiente':
+      return isNormalizacion.value || isSuperAdmin.value;
+    case 'vp_mantenimiento':
+      return isVpMantenimiento.value || isSuperAdmin.value;
+    case 'vp_soporte':
+      return isVpSoporte.value || isSuperAdmin.value;
+    case 'administracion':
+      return isAdministracion.value || isSuperAdmin.value;
+    default:
+      return false;
+  }
+}
+
+function canRejectStage(solicitud) {
+  if (!solicitud || finalStatuses.includes(solicitud.status)) return false;
+  switch (solicitud.status) {
+    case 'pendiente':
+      return isNormalizacion.value || isSuperAdmin.value;
+    case 'vp_mantenimiento':
+      return isVpMantenimiento.value || isSuperAdmin.value;
+    case 'vp_soporte':
+      return isVpSoporte.value || isSuperAdmin.value;
+    case 'administracion':
+      return isAdministracion.value || isSuperAdmin.value;
+    case 'normalizacion_final':
+      return isNormalizacion.value || isSuperAdmin.value;
+    default:
+      return false;
+  }
+}
+
+function canComprasApprove(solicitud) {
+  if (!solicitud || finalStatuses.includes(solicitud.status)) return false;
+  if (!(isCompras.value || isSuperAdmin.value)) return false;
+  if (!['compras', 'normalizacion_final'].includes(solicitud.status)) return false;
+  return remainingQuantity(solicitud) > 0;
+}
+
+function canComprasReject(solicitud) {
+  if (!solicitud || finalStatuses.includes(solicitud.status)) return false;
+  if (!(isCompras.value || isSuperAdmin.value)) return false;
+  return ['compras', 'normalizacion_final'].includes(solicitud.status);
+}
+
+function canFinalizeOrder(solicitud) {
   if (!solicitud) return false;
-  if (finalStatuses.includes(solicitud.status)) return false;
-  if (solicitud.status === 'vgo') return false;
-  if (isSuperAdmin.value) return true;
-  if (isNormalizacion.value) return solicitud.status === 'pendiente';
-  if (isAdministracion.value) return solicitud.status === 'administracion';
-  return false;
-}
-
-function canTransferToAdministracion(solicitud) {
-  if (!solicitud) return false;
-  if (finalStatuses.includes(solicitud.status)) return false;
-  if (solicitud.status === 'administracion') return false;
-  if (isSuperAdmin.value) return true;
-  if (isNormalizacion.value) return solicitud.status === 'pendiente';
-  if (isVgo.value) return solicitud.status === 'vgo';
-  return false;
-}
-
-function canApproveDestination(solicitud) {
-  if (!['vgo', 'administracion'].includes(solicitud.status)) return false;
-  if (solicitud.destination_decision) return false;
-
-  if (isSuperAdmin.value) return true;
-  if (isVgo.value && solicitud.status === 'vgo') return true;
-  if (isAdministracion.value && solicitud.status === 'administracion') return true;
-  return false;
-}
-
-function canRejectDestination(solicitud) {
-  return canApproveDestination(solicitud);
-}
-
-function canFinalizeApproval(solicitud) {
-  return (
-    (isNormalizacion.value || isSuperAdmin.value) &&
-    ['vgo', 'administracion'].includes(solicitud.status) &&
-    solicitud.destination_decision === 'aprobado'
-  );
-}
-
-function canFinalizeRejection(solicitud) {
-  return (
-    (isNormalizacion.value || isSuperAdmin.value) &&
-    ['pendiente', 'vgo', 'administracion'].includes(solicitud.status)
-  );
+  if (!(isNormalizacion.value || isSuperAdmin.value)) return false;
+  return solicitud.status === 'normalizacion_final' && remainingQuantity(solicitud) === 0;
 }
 
 function timelineLabel(action) {
   switch (action) {
     case 'created':
       return 'Solicitud creada';
-    case 'transferred':
-      return 'Transferencia';
-    case 'destination_approved':
-      return 'Aprobación de gerencia';
-    case 'destination_rejected':
-      return 'Rechazo de gerencia';
-    case 'final_approved':
-      return 'Aprobación final';
-    case 'final_rejected':
-      return 'Rechazo final';
+    case 'approve_stage':
+      return 'Aprobación de etapa';
+    case 'reject_stage':
+      return 'Rechazo de etapa';
+    case 'compras_approve':
+      return 'Aprobación de Compras';
+    case 'compras_reject':
+      return 'Devolución de Compras';
+    case 'finalize_order':
+      return 'Orden de entrega';
     default:
       return action;
   }
+}
+
+function attachmentUrl(path) {
+  if (!path) return null;
+  return `/storage/${path}`;
 }
 </script>
 
@@ -277,6 +345,18 @@ function timelineLabel(action) {
               <p class="text-sm text-gray-500">Destino</p>
               <p class="text-gray-800">{{ detalleSolicitud.to_gerencia?.name ?? 'Sin gerencia' }}</p>
             </div>
+            <div>
+              <p class="text-sm text-gray-500">Estado actual</p>
+              <p class="text-gray-800">{{ formatStatus(detalleSolicitud.status) }}</p>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500">Cantidad aprobada</p>
+              <p class="text-gray-800">{{ detalleSolicitud.approved_quantity }} / {{ detalleSolicitud.quantity }}</p>
+            </div>
+            <div v-if="detalleSolicitud.return_date">
+              <p class="text-sm text-gray-500">Fecha de devolución</p>
+              <p class="text-gray-800">{{ formatShortDate(detalleSolicitud.return_date) }}</p>
+            </div>
             <div class="md:col-span-2">
               <p class="text-sm text-gray-500">Descripción</p>
               <p class="text-gray-800 whitespace-pre-line">{{ detalleSolicitud.description || 'Sin descripción' }}</p>
@@ -307,6 +387,20 @@ function timelineLabel(action) {
                   <span class="font-semibold">Justificación:</span>
                   {{ log.justification || 'Sin justificación' }}
                 </p>
+                <p v-if="log.approved_quantity">
+                  <span class="font-semibold">Cantidad aprobada:</span>
+                  {{ log.approved_quantity }}
+                </p>
+                <div v-if="log.attachment_path" class="mt-2">
+                  <a
+                    :href="attachmentUrl(log.attachment_path)"
+                    target="_blank"
+                    class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                  >
+                    <PaperClipIcon class="w-4 h-4" />
+                    Ver documento adjunto
+                  </a>
+                </div>
               </div>
             </li>
           </ul>
@@ -330,6 +424,9 @@ function timelineLabel(action) {
         <p class="text-sm text-gray-600 mb-4">
           Ingresa la justificación para continuar con la acción seleccionada.
         </p>
+        <p v-if="actionModal.description" class="text-xs text-gray-500 mb-4">
+          Etapa actual: {{ actionModal.description }}
+        </p>
         <div v-if="actionError" class="mb-3 p-3 bg-red-100 text-red-700 rounded">
           {{ actionError }}
         </div>
@@ -343,6 +440,33 @@ function timelineLabel(action) {
               placeholder="Describe la razón de la acción"
               required
             ></textarea>
+          </div>
+          <div v-if="actionForm.action === 'compras_approve'">
+            <label class="text-sm font-medium text-gray-700">Cantidad aprobada</label>
+            <input
+              type="number"
+              v-model.number="actionForm.approved_quantity"
+              :max="remainingQuantity(actionModal.solicitud)"
+              min="1"
+              step="1"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Cantidad a aprobar"
+              required
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Cantidad pendiente: {{ remainingQuantity(actionModal.solicitud) }}
+            </p>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700">Adjuntar documento (opcional)</label>
+            <input
+              ref="attachmentInput"
+              type="file"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept="application/pdf,image/*"
+              @change="handleAttachmentChange"
+            />
+            <p class="text-xs text-gray-500 mt-1">Formatos sugeridos: PDF, imágenes o documentos.</p>
           </div>
           <div class="flex justify-end gap-3 flex-wrap">
             <button
@@ -467,6 +591,9 @@ function timelineLabel(action) {
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-28">
                 Cantidad
               </th>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-32">
+                Aprobado
+              </th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-48">
                 Fecha
               </th>
@@ -503,60 +630,53 @@ function timelineLabel(action) {
                   >
                     <EyeIcon class="w-4 h-4" />
                   </button>
-
-                  <template v-if="canTransferToVgo(solicitud) || canTransferToAdministracion(solicitud)">
-                    <button
-                      v-if="canTransferToVgo(solicitud)"
-                      :class="[baseActionClass, 'bg-indigo-100 text-indigo-600 hover:bg-indigo-200']"
-                      @click="openActionModal(solicitud, 'transfer_vgo')"
-                      title="Transferir a VGO"
-                    >
-                      <ArrowsRightLeftIcon class="w-4 h-4" />
-                    </button>
-                    <button
-                      v-if="canTransferToAdministracion(solicitud)"
-                      :class="[baseActionClass, 'bg-purple-100 text-purple-600 hover:bg-purple-200']"
-                      @click="openActionModal(solicitud, 'transfer_administracion')"
-                      title="Transferir a Administración"
-                    >
-                      <ArrowsRightLeftIcon class="w-4 h-4" />
-                    </button>
-                  </template>
-
-                  <template v-if="canApproveDestination(solicitud)">
+                  <template v-if="canApproveStage(solicitud)">
                     <button
                       :class="[baseActionClass, 'bg-green-100 text-green-600 hover:bg-green-200']"
-                      @click="openActionModal(solicitud, 'approve_destination')"
-                      title="Aprobar"
+                      @click="openActionModal(solicitud, 'approve_stage')"
+                      title="Aprobar etapa"
                     >
                       <CheckCircleIcon class="w-4 h-4" />
                     </button>
+                  </template>
+
+                  <template v-if="canRejectStage(solicitud)">
                     <button
                       :class="[baseActionClass, 'bg-red-100 text-red-600 hover:bg-red-200']"
-                      @click="openActionModal(solicitud, 'reject_destination')"
-                      title="Rechazar"
+                      @click="openActionModal(solicitud, 'reject_stage')"
+                      title="Rechazar etapa"
                     >
                       <XCircleIcon class="w-4 h-4" />
                     </button>
                   </template>
 
-                  <template v-if="canFinalizeApproval(solicitud)">
+                  <template v-if="canComprasApprove(solicitud)">
                     <button
                       :class="[baseActionClass, 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200']"
-                      @click="openActionModal(solicitud, 'approve_final')"
-                      title="Aprobación final"
+                      @click="openActionModal(solicitud, 'compras_approve')"
+                      title="Aprobación de Compras"
                     >
                       <CheckCircleIcon class="w-4 h-4" />
                     </button>
                   </template>
 
-                  <template v-if="canFinalizeRejection(solicitud)">
+                  <template v-if="canComprasReject(solicitud)">
                     <button
                       :class="[baseActionClass, 'bg-rose-100 text-rose-600 hover:bg-rose-200']"
-                      @click="openActionModal(solicitud, 'reject_final')"
-                      title="Rechazar"
+                      @click="openActionModal(solicitud, 'compras_reject')"
+                      title="Devolver a Administración"
                     >
                       <XCircleIcon class="w-4 h-4" />
+                    </button>
+                  </template>
+
+                  <template v-if="canFinalizeOrder(solicitud)">
+                    <button
+                      :class="[baseActionClass, 'bg-sky-100 text-sky-600 hover:bg-sky-200']"
+                      @click="openActionModal(solicitud, 'finalize_order')"
+                      title="Generar orden de entrega"
+                    >
+                      <DocumentArrowDownIcon class="w-4 h-4" />
                     </button>
                   </template>
                 </div>
@@ -572,6 +692,9 @@ function timelineLabel(action) {
               </td>
               <td class="px-4 py-3 align-top text-sm text-gray-700">
                 {{ solicitud.quantity }}
+              </td>
+              <td class="px-4 py-3 align-top text-sm text-gray-700">
+                {{ solicitud.approved_quantity }} / {{ solicitud.quantity }}
               </td>
               <td class="px-4 py-3 align-top text-sm text-gray-700">
                 {{ formatDate(solicitud.created_at) }}

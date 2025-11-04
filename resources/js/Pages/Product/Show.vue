@@ -2,10 +2,29 @@
 import { Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { PencilIcon } from '@heroicons/vue/24/outline';
+import { computed } from 'vue';
 
 const props = defineProps({
   product: Object,
   canManage: Boolean,
+});
+
+const tipoMaterialLabel = computed(() => {
+  const map = {
+    equipos: 'Equipos',
+    herramientas: 'Herramientas',
+    consumibles: 'Consumibles',
+  };
+
+  return map[props.product?.tipo_material] ?? 'Sin clasificación';
+});
+
+const ubicacionesLabel = computed(() => {
+  if (Array.isArray(props.product?.ubicaciones) && props.product.ubicaciones.length > 0) {
+    return props.product.ubicaciones.join(', ');
+  }
+
+  return 'Sin ubicación asignada';
 });
 </script>
 
@@ -46,7 +65,35 @@ const props = defineProps({
             <p class="text-lg font-semibold text-gray-900">{{ product.name }}</p>
           </div>
           <div>
-            <span class="text-sm text-gray-500 uppercase tracking-wide">Descripción</span>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Sub-Área</span>
+            <p class="text-gray-700">{{ product.sub_area || 'Sin sub-área registrada' }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Tipo de Material</span>
+            <p class="text-gray-700">{{ tipoMaterialLabel }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Ubicación</span>
+            <p class="text-gray-700">{{ ubicacionesLabel }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Modelo</span>
+            <p class="text-gray-700">{{ product.modelo || 'Sin modelo especificado' }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Dimensiones</span>
+            <p class="text-gray-700">{{ product.dimensiones || 'Sin dimensiones registradas' }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Marcas sugeridas</span>
+            <p class="text-gray-700 whitespace-pre-line">{{ product.marcas_sugeridas || 'Sin marcas sugeridas' }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Especificaciones técnicas</span>
+            <p class="text-gray-700 whitespace-pre-line">{{ product.especificaciones_tecnicas || 'Sin especificaciones registradas' }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-gray-500 uppercase tracking-wide">Descripción general</span>
             <p class="text-gray-700 whitespace-pre-line">{{ product.description || 'Sin descripción' }}</p>
           </div>
         </div>

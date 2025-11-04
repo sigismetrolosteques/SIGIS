@@ -5,13 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Inventory;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 
 class InventoryController extends Controller
 {
+    protected array $tipoMaterialOptions = [
+        ['value' => 'equipos', 'label' => 'Equipos'],
+        ['value' => 'herramientas', 'label' => 'Herramientas'],
+        ['value' => 'consumibles', 'label' => 'Consumibles'],
+    ];
+
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $tipoMaterial = $request->input('tipo_material');
 
         $inventories = Inventory::with('product')
             ->when($search, function ($query, $value) {
@@ -24,6 +32,14 @@ class InventoryController extends Controller
                         });
                 });
             })
+            ->when($tipoMaterial, function ($query, $value) {
+                $allowed = array_values(array_intersect(Arr::wrap($value), ['equipos', 'herramientas', 'consumibles']));
+                if (!empty($allowed)) {
+                    $query->whereHas('product', function ($productQuery) use ($allowed) {
+                        $productQuery->whereIn('tipo_material', $allowed);
+                    });
+                }
+            })
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -32,8 +48,10 @@ class InventoryController extends Controller
             'inventories' => $inventories,
             'filters' => [
                 'search' => $search,
+                'tipo_material' => $tipoMaterial,
             ],
             'canManage' => $request->user()->hasAnyRole(['super_admin', 'admin']),
+            'tipoMaterialOptions' => $this->tipoMaterialOptions,
         ]);
     }
 
@@ -43,6 +61,7 @@ class InventoryController extends Controller
 
         return Inertia::render('Inventory/Create', [
             'products' => Product::all(),
+            'tipoMaterialOptions' => $this->tipoMaterialOptions,
         ]);
     }
 
@@ -75,6 +94,7 @@ class InventoryController extends Controller
         return Inertia::render('Inventory/Edit', [
             'inventory' => $inventory,
             'products' => Product::all(),
+            'tipoMaterialOptions' => $this->tipoMaterialOptions,
         ]);
     }
 

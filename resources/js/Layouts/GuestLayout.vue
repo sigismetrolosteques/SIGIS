@@ -1,6 +1,7 @@
 <script setup>
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Link } from '@inertiajs/vue3';
+import BackButton from '@/Components/BackButton.vue';
 </script>
 
 <template>
@@ -16,6 +17,9 @@ import { Link } from '@inertiajs/vue3';
         <div
             class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg"
         >
+            <div class="mb-4">
+                <BackButton fallbackRoute="/" />
+            </div>
             <slot />
         </div>
     </div>

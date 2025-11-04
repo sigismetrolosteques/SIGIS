@@ -2,6 +2,7 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/vue/24/outline';
 import { ExclamationCircleIcon } from '@heroicons/vue/20/solid';
+import BackButton from '@/Components/BackButton.vue';
 
 defineProps({
   canResetPassword: {
@@ -60,6 +61,7 @@ const submit = () => {
 
       <!-- Tarjeta de login -->
       <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
+        
         <!-- Encabezado con logo del metro -->
         <div class="text-center mb-6">
           <img 
@@ -68,6 +70,7 @@ const submit = () => {
             class="mx-auto h-20 w-150"
           >
           <h2 class="text-3xl font-bold text-gray-900 mb-1">Metro Los Teques</h2>
+          <h3 class="text-3xl font-bold text-gray-900 mb-3">SIGIS</h3>
           <p class="text-gray-700">Inicia sesión para continuar</p>
         </div>
 
@@ -102,8 +105,16 @@ const submit = () => {
 
         <!-- Campo Email -->
         <div class="relative">
-          <input id="email" type="email" placeholder="Correo Electrónico" v-model="form.email" :class="{ 'border-red-500': form.errors.email }"
-            class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500" required/>
+          <EnvelopeIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <input
+            id="email"
+            type="email"
+            placeholder="Ejemplo: usuario@metro.gob.ve"
+            v-model="form.email"
+            :class="{ 'border-red-500': form.errors.email }"
+            class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500"
+            required
+          />
           <!-- Este mensaje aparecerá debajo del input -->
           <!--p v-if="form.errors.email" class="mt-1 text-sm text-red-600 ml-2">
             {{ form.errors.email }}
@@ -113,7 +124,7 @@ const submit = () => {
         <!-- Password -->
         <div class="relative">
           <LockClosedIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input id="password" type="password" placeholder="Contraseña" v-model="form.password" required
+          <input id="password" type="password" placeholder="Ejemplo: P@ssw0rd123" v-model="form.password" required
             autocomplete="current-password"
             class="w-full pl-10 pr-4 py-3 rounded-full border-2 focus:ring-2 focus:ring-red-500" />
           <!--p v-if="form.errors.password" class="text-sm text-red-600 mt-1">

@@ -37,6 +37,7 @@ const submit = () => {
                     required
                     autocomplete="current-password"
                     autofocus
+                    placeholder="Ejemplo: P@ssw0rd123"
                 />
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>

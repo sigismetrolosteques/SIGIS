@@ -5,7 +5,6 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({
   products: Array,
-  gerencias: Array,
   inventories: Array, // todos los inventarios
   flash: Object,
 });
@@ -17,8 +16,8 @@ const form = useForm({
   product_id: '',
   inventory_id: null,
   quantity: 1,
-  to_gerencia_id: '',
   description: '',
+  return_date: '',
 });
 
 const generalError = ref('');
@@ -43,6 +42,23 @@ const productsForInventario = computed(() =>
 const displayedProducts = computed(() =>
   activeTab.value === 'inventario' ? productsForInventario.value : props.products
 );
+
+const selectedProduct = computed(() => {
+  const id = Number(form.product_id);
+  if (!id) return null;
+  return props.products.find(product => product.id === id) || null;
+});
+
+const requiresReturnDate = computed(() => {
+  if (!selectedProduct.value) return false;
+  return ['equipos', 'herramientas'].includes(selectedProduct.value.tipo_material);
+});
+
+const tipoMaterialLabels = {
+  equipos: 'Equipos',
+  herramientas: 'Herramientas',
+  consumibles: 'Consumibles',
+};
 
 const inventoriesForProduct = computed(() => {
   if (!form.product_id) return [];
@@ -70,6 +86,7 @@ const quantityOptions = computed(() => {
 watch(() => form.product_id, () => {
   form.inventory_id = null;
   form.quantity = 1;
+  form.return_date = '';
   form.clearErrors();
   generalError.value = '';
 });
@@ -96,6 +113,7 @@ watch(activeTab, (tab) => {
     if (!availableInventoryProductIds.value.has(productId)) {
       form.product_id = '';
       form.inventory_id = null;
+      form.return_date = '';
     }
   }
 });
@@ -109,6 +127,31 @@ watch(displayedProducts, (products) => {
   }
 });
 
+watch(requiresReturnDate, (required) => {
+  if (!required) {
+    form.return_date = '';
+    form.clearErrors('return_date');
+  }
+});
+
+watch(() => form.return_date, () => {
+  if (form.errors.return_date) {
+    form.clearErrors('return_date');
+  }
+});
+
+watch(() => form.quantity, (value) => {
+  if (form.errors.quantity) {
+    form.clearErrors('quantity');
+  }
+
+  if (value === '' || value === null) return;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 1) {
+    form.quantity = 1;
+  }
+});
+
 function setTab(tab) {
   if (activeTab.value === tab) return;
   activeTab.value = tab;
@@ -119,6 +162,8 @@ function submit() {
     ...form.data(),
     request_type: activeTab.value,
     inventory_id: activeTab.value === 'inventario' ? form.inventory_id : null,
+    quantity: Number(form.quantity) || 1,
+    return_date: requiresReturnDate.value ? (form.return_date || null) : null,
   };
 
   form.transform(() => payload).post(route('solicitudes.store'), {
@@ -184,6 +229,9 @@ function submit() {
             <option v-for="p in displayedProducts" :key="p.id" :value="p.id">{{ p.name }}</option>
           </select>
           <div v-if="form.errors.product_id" class="text-red-600 mt-1 text-sm">{{ form.errors.product_id }}</div>
+          <div v-if="selectedProduct" class="text-sm text-gray-600 mt-2">
+            Tipo de material: {{ tipoMaterialLabels[selectedProduct.tipo_material] || 'Sin clasificación' }}
+          </div>
         </div>
 
         <!-- Inventario (filtrado por producto) -->
@@ -225,14 +273,17 @@ function submit() {
           <div v-if="form.errors.quantity" class="text-red-600 mt-1 text-sm">{{ form.errors.quantity }}</div>
         </div>
 
-        <!-- Gerencia destino -->
-        <div>
-          <label class="text-sm font-medium">Gerencia destino</label>
-          <select v-model="form.to_gerencia_id" class="w-full border rounded px-3 py-2">
-            <option :value="''">-- Selecciona gerencia --</option>
-            <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name ?? g.nombre ?? g.id }}</option>
-          </select>
-          <div v-if="form.errors.to_gerencia_id" class="text-red-600 mt-1 text-sm">{{ form.errors.to_gerencia_id }}</div>
+        <!-- Fecha de devolución -->
+        <div v-if="requiresReturnDate">
+          <label class="text-sm font-medium">Fecha de devolución</label>
+          <input
+            type="date"
+            v-model="form.return_date"
+            class="w-full border rounded px-3 py-2"
+            :class="{ 'border-red-500': form.errors.return_date }"
+          />
+          <div v-if="form.errors.return_date" class="text-red-600 mt-1 text-sm">{{ form.errors.return_date }}</div>
+          <p class="text-xs text-gray-500 mt-1">Ejemplo: 2025-12-31</p>
         </div>
 
         <!-- Descripción -->

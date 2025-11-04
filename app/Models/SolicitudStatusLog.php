@@ -15,6 +15,12 @@ class SolicitudStatusLog extends Model
         'action',
         'justification',
         'changed_by',
+        'attachment_path',
+        'approved_quantity',
+    ];
+
+    protected $casts = [
+        'approved_quantity' => 'integer',
     ];
 
     public function solicitud()

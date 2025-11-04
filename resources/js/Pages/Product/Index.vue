@@ -3,7 +3,7 @@ import { Link, useForm, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -11,6 +11,10 @@ const props = defineProps({
   flash: Object,
   filters: Object,
   canManage: Boolean,
+  tipoMaterialOptions: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const page = usePage();
@@ -18,6 +22,11 @@ const successMessage = ref(null);
 const showDeleteModal = ref(false);
 const productToDelete = ref(null);
 const search = ref(props.filters?.search ?? '');
+const selectedTipoMaterial = ref(
+  Array.isArray(props.filters?.tipo_material)
+    ? [...props.filters.tipo_material]
+    : []
+);
 
 const form = useForm({});
 
@@ -49,15 +58,51 @@ onMounted(() => {
 function applyFilters() {
   router.get(
     route('product.index'),
-    { search: search.value || undefined },
+    {
+      search: search.value || undefined,
+      tipo_material: selectedTipoMaterial.value.length ? selectedTipoMaterial.value : undefined,
+    },
     { preserveState: true, preserveScroll: true, replace: true }
   );
 }
 
 function resetFilters() {
   search.value = '';
+  selectedTipoMaterial.value = [];
   applyFilters();
 }
+
+const toggleTipoMaterialFilter = (value) => {
+  const index = selectedTipoMaterial.value.indexOf(value);
+  if (index === -1) {
+    selectedTipoMaterial.value.push(value);
+  } else {
+    selectedTipoMaterial.value.splice(index, 1);
+  }
+  applyFilters();
+};
+
+const tipoMaterialLabels = computed(() => {
+  return props.tipoMaterialOptions.reduce((acc, option) => {
+    acc[option.value] = option.label;
+    return acc;
+  }, {});
+});
+
+const formatTipoMaterial = (value) => tipoMaterialLabels.value[value] ?? 'Sin clasificación';
+
+const formatUbicaciones = (values) => {
+  if (Array.isArray(values) && values.length > 0) {
+    return values.join(', ');
+  }
+
+  return 'Sin ubicación asignada';
+};
+
+const resetTipoMaterialFilter = () => {
+  selectedTipoMaterial.value = [];
+  applyFilters();
+};
 </script>
 
 <template>
@@ -107,16 +152,42 @@ function resetFilters() {
             type="button"
             class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
             @click="resetFilters"
-          >
+            >
             Limpiar
           </button>
         </form>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium text-gray-700">Tipo de Material:</span>
+          <button
+            v-for="option in props.tipoMaterialOptions"
+            :key="option.value"
+            type="button"
+            @click="toggleTipoMaterialFilter(option.value)"
+            :class="[
+              'px-3 py-1.5 rounded-full border transition text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
+              selectedTipoMaterial.includes(option.value)
+                ? 'bg-blue-600 text-white border-blue-600 shadow focus:ring-blue-400'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 focus:ring-gray-300'
+            ]"
+          >
+            {{ option.label }}
+          </button>
+          <button
+            v-if="selectedTipoMaterial.length"
+            type="button"
+            class="text-xs text-blue-600 hover:text-blue-700 underline"
+            @click="resetTipoMaterialFilter"
+          >
+            Limpiar
+          </button>
+        </div>
         <Link
           v-if="canManage"
           :href="route('product.create')"
-          class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 transition flex-shrink-0"
+          title="Nuevo Producto"
         >
-          Nuevo Producto
+          Nuevo
         </Link>
       </div>
     </div>
@@ -135,7 +206,9 @@ function resetFilters() {
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Imagen</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Código</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Nombre</th>
-            <th class="py-3 px-4 font-semibold text-gray-700 text-left">Descripción</th>
+            <th class="py-3 px-4 font-semibold text-gray-700 text-left">Sub-Área</th>
+            <th class="py-3 px-4 font-semibold text-gray-700 text-left">Tipo de Material</th>
+            <th class="py-3 px-4 font-semibold text-gray-700 text-left">Ubicación</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-center">Acciones</th>
           </tr>
         </thead>
@@ -156,9 +229,9 @@ function resetFilters() {
               {{ product.code }}
             </td>
             <td class="py-3 px-4 align-middle break-words">{{ product.name }}</td>
-            <td class="py-3 px-4 align-middle break-words">
-              {{ product.description }}
-            </td>
+            <td class="py-3 px-4 align-middle break-words">{{ product.sub_area || 'Sin sub-área' }}</td>
+            <td class="py-3 px-4 align-middle break-words">{{ formatTipoMaterial(product.tipo_material) }}</td>
+            <td class="py-3 px-4 align-middle break-words">{{ formatUbicaciones(product.ubicaciones) }}</td>
             <td class="py-3 px-4 align-middle">
               <div class="flex justify-center items-center gap-3">
                 <Link

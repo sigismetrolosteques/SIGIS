@@ -4,18 +4,18 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use App\Models\Gerencia;
 
 class GerenciaSeeder extends Seeder
 {
     public function run(): void
     {
-        $now = Carbon::now()->toDateTimeString();
-
         $names = [
             'Administración',
-            'VGO',
             'Normalización',
+            'VP. Mantenimiento',
+            'VP. Soporte',
+            'Compras',
             'Obras Civiles',
             'Electrificación',
             'Vías Férreas',
@@ -25,26 +25,20 @@ class GerenciaSeeder extends Seeder
             'Electromecánica',
         ];
 
-        $existingIds = DB::table('gerencias')
-            ->orderBy('id')
-            ->pluck('id')
-            ->toArray();
+        DB::transaction(function () use ($names) {
+            $gerencias = Gerencia::orderBy('id')->get();
 
-        foreach ($names as $index => $name) {
-            if (isset($existingIds[$index])) {
-                DB::table('gerencias')
-                    ->where('id', $existingIds[$index])
-                    ->update([
-                        'name' => $name,
-                        'updated_at' => $now,
-                    ]);
-            } else {
-                DB::table('gerencias')->insert([
-                    'name' => $name,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+            foreach ($gerencias as $gerencia) {
+                $gerencia->update(['name' => '__tmp_' . $gerencia->id]);
             }
-        }
+
+            foreach ($names as $index => $name) {
+                if (isset($gerencias[$index])) {
+                    $gerencias[$index]->update(['name' => $name]);
+                } else {
+                    Gerencia::create(['name' => $name]);
+                }
+            }
+        });
     }
 }

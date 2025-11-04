@@ -18,7 +18,13 @@ use App\Mail\WelcomeUserMail;
 
 class UserController extends Controller
 {
-    protected array $adminGerencias = ['Administración', 'VGO', 'Normalización'];
+    protected array $adminGerencias = [
+        'Administración',
+        'Normalización',
+        'VP. Mantenimiento',
+        'VP. Soporte',
+        'Compras',
+    ];
 
     public function index()
     {

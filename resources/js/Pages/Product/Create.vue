@@ -5,7 +5,15 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 
 const props = defineProps({
   flash: Object,
-  errors: Object
+  errors: Object,
+  tipoMaterialOptions: {
+    type: Array,
+    default: () => [],
+  },
+  ubicacionOptions: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const successMessage = ref(props.flash?.success || '');
@@ -13,39 +21,54 @@ const generalError = ref('');
 
 const form = useForm({
   name: '',
+  sub_area: '',
+  ubicaciones: [],
+  tipo_material: '',
+  marcas_sugeridas: '',
+  modelo: '',
+  dimensiones: '',
+  especificaciones_tecnicas: '',
   image: null,
-  description: ''
+  description: '',
 });
 
-// Validaciones simples
+const clearError = (field) => {
+  if (form.errors[field]) {
+    form.clearErrors(field);
+  }
+  generalError.value = '';
+};
+
 const validateForm = () => {
   let isValid = true;
   generalError.value = '';
+
   if (!form.name.trim()) {
     form.setError('name', 'El nombre es obligatorio');
     isValid = false;
   }
+
+  if (!form.tipo_material) {
+    form.setError('tipo_material', 'Selecciona el tipo de material');
+    isValid = false;
+  }
+
   if (!form.image) {
     form.setError('image', 'La imagen es obligatoria');
     isValid = false;
   }
+
   return isValid;
 };
 
-// Subir producto
 const submit = () => {
   if (!validateForm()) {
     generalError.value = 'Por favor corrige los errores del formulario.';
     return;
   }
 
-  const payload = new FormData();
-  payload.append('name', form.name);
-  payload.append('image', form.image);
-  payload.append('description', form.description);
-
   form.post(route('product.store'), {
-    data: payload,
+    forceFormData: true,
     preserveScroll: true,
     onSuccess: () => {
       successMessage.value = '¡Producto creado exitosamente!';
@@ -56,24 +79,29 @@ const submit = () => {
     },
     onError: () => {
       generalError.value = 'Hubo un error al crear el producto.';
-    }
+    },
   });
 };
 
-// Manejar selección de archivo
 const handleFileChange = (event) => {
-  form.image = event.target.files[0];
-  if (form.errors.image) form.clearErrors('image');
+  form.image = event.target.files[0] || null;
+  clearError('image');
 };
 
-// Limpiar errores
-const clearError = (field) => {
-  if (form.errors[field]) form.clearErrors(field);
-  generalError.value = '';
+const toggleTipoMaterial = (value) => {
+  form.tipo_material = form.tipo_material === value ? '' : value;
+  clearError('tipo_material');
 };
 
 watch(() => form.name, () => clearError('name'));
+watch(() => form.sub_area, () => clearError('sub_area'));
 watch(() => form.description, () => clearError('description'));
+watch(() => form.marcas_sugeridas, () => clearError('marcas_sugeridas'));
+watch(() => form.modelo, () => clearError('modelo'));
+watch(() => form.dimensiones, () => clearError('dimensiones'));
+watch(() => form.especificaciones_tecnicas, () => clearError('especificaciones_tecnicas'));
+watch(() => form.ubicaciones, () => clearError('ubicaciones'), { deep: true });
+watch(() => form.tipo_material, () => clearError('tipo_material'));
 </script>
 
 <template>
@@ -93,36 +121,161 @@ watch(() => form.description, () => clearError('description'));
 
       <form @submit.prevent="submit" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          <!-- Nombre -->
           <div>
-            <label class="text-sm font-medium">Nombre</label>
-            <input v-model="form.name" @input="clearError('name')"
+            <label class="text-sm font-medium">Nombre del material</label>
+            <input
+              v-model="form.name"
+              @input="clearError('name')"
               :class="{ 'border-red-500': form.errors.name }"
               class="w-full border rounded px-3 py-2"
-              placeholder="Nombre del producto" />
+              placeholder="Ingresa el nombre"
+            />
             <div v-if="form.errors.name" class="text-red-600 mt-1 text-sm">
               {{ form.errors.name }}
             </div>
           </div>
 
-          <!-- Imagen -->
           <div>
-            <label class="text-sm font-medium">Imagen</label>
-            <input type="file" @change="handleFileChange"
-              :class="{ 'border-red-500': form.errors.image }"
-              class="w-full border rounded px-3 py-2" />
-            <div v-if="form.errors.image" class="text-red-600 mt-1 text-sm">
-              {{ form.errors.image }}
+            <label class="text-sm font-medium">Sub-Área</label>
+            <input
+              v-model="form.sub_area"
+              @input="clearError('sub_area')"
+              :class="{ 'border-red-500': form.errors.sub_area }"
+              class="w-full border rounded px-3 py-2"
+              placeholder="Ejemplo: Mantenimiento"
+            />
+            <div v-if="form.errors.sub_area" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.sub_area }}
             </div>
           </div>
 
-          <!-- Descripción -->
           <div class="md:col-span-2">
-            <label class="text-sm font-medium">Descripción</label>
-            <textarea v-model="form.description"
+            <label class="text-sm font-medium">Tipo de Material</label>
+            <div class="mt-2 flex flex-wrap gap-3">
+              <label
+                v-for="option in props.tipoMaterialOptions"
+                :key="option.value"
+                class="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer bg-white hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4"
+                  :checked="form.tipo_material === option.value"
+                  @change="toggleTipoMaterial(option.value)"
+                />
+                <span class="text-sm text-gray-700">{{ option.label }}</span>
+              </label>
+            </div>
+            <div v-if="form.errors.tipo_material" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.tipo_material }}
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-medium">Ubicación</label>
+            <div class="mt-2 flex flex-wrap gap-3">
+              <label
+                v-for="option in props.ubicacionOptions"
+                :key="option"
+                class="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer bg-white hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4"
+                  :value="option"
+                  v-model="form.ubicaciones"
+                />
+                <span class="text-sm text-gray-700">{{ option }}</span>
+              </label>
+            </div>
+            <div v-if="form.errors.ubicaciones" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.ubicaciones }}
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-medium">Marcas sugeridas</label>
+            <textarea
+              v-model="form.marcas_sugeridas"
+              @input="clearError('marcas_sugeridas')"
+              :class="{ 'border-red-500': form.errors.marcas_sugeridas }"
               class="w-full border rounded px-3 py-2"
-              placeholder="Descripción del producto"></textarea>
+              placeholder="Ingresa las marcas recomendadas"
+            ></textarea>
+            <div v-if="form.errors.marcas_sugeridas" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.marcas_sugeridas }}
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Modelo</label>
+            <input
+              v-model="form.modelo"
+              @input="clearError('modelo')"
+              :class="{ 'border-red-500': form.errors.modelo }"
+              class="w-full border rounded px-3 py-2"
+              placeholder="Ejemplo: MT-500"
+            />
+            <div v-if="form.errors.modelo" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.modelo }}
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Dimensiones</label>
+            <input
+              v-model="form.dimensiones"
+              @input="clearError('dimensiones')"
+              :class="{ 'border-red-500': form.errors.dimensiones }"
+              class="w-full border rounded px-3 py-2"
+              placeholder="Ejemplo: 50cm x 30cm"
+            />
+            <div v-if="form.errors.dimensiones" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.dimensiones }}
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-medium">Especificaciones técnicas</label>
+            <textarea
+              v-model="form.especificaciones_tecnicas"
+              @input="clearError('especificaciones_tecnicas')"
+              :class="{ 'border-red-500': form.errors.especificaciones_tecnicas }"
+              class="w-full border rounded px-3 py-2"
+              placeholder="Describe las especificaciones técnicas relevantes"
+            ></textarea>
+            <div v-if="form.errors.especificaciones_tecnicas" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.especificaciones_tecnicas }}
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-medium">Descripción general</label>
+            <textarea
+              v-model="form.description"
+              @input="clearError('description')"
+              :class="{ 'border-red-500': form.errors.description }"
+              class="w-full border rounded px-3 py-2"
+              placeholder="Información adicional del producto"
+            ></textarea>
+            <div v-if="form.errors.description" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.description }}
+            </div>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm font-medium">Fotografía</label>
+            <input
+              type="file"
+              @change="handleFileChange"
+              :class="{ 'border-red-500': form.errors.image }"
+              class="w-full border rounded px-3 py-2"
+              accept="image/jpeg,image/png"
+            />
+            <p class="text-xs text-gray-500 mt-1">Formatos permitidos: JPG, PNG. Tamaño máximo 2&nbsp;MB.</p>
+            <div v-if="form.errors.image" class="text-red-600 mt-1 text-sm">
+              {{ form.errors.image }}
+            </div>
           </div>
         </div>
 
