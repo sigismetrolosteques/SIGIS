@@ -6,7 +6,11 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 const props = defineProps({
   products: Array, // lista de productos para seleccionar
   flash: Object,
-  errors: Object
+  errors: Object,
+  ubicacionOptions: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const successMessage = ref(props.flash?.success || '');
@@ -16,8 +20,10 @@ const form = useForm({
   product_id: '',
   quantity: 0,
   location: '',
+  ubicaciones: [],
   notes: ''
 });
+
 
 // Validaciones simples
 const validateForm = () => {
@@ -64,6 +70,14 @@ const clearError = (field) => {
 
 watch(() => form.quantity, () => clearError('quantity'));
 watch(() => form.product_id, () => clearError('product_id'));
+watch(
+  () => form.ubicaciones,
+  () => {
+    form.location = form.ubicaciones.length ? form.ubicaciones.join(', ') : '';
+    clearError('location');
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -71,7 +85,7 @@ watch(() => form.product_id, () => clearError('product_id'));
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-6">Crear Registro de Inventario</h1>
 
-      <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+      <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
         {{ successMessage }}
       </div>
       <div v-if="generalError" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
@@ -109,9 +123,25 @@ watch(() => form.product_id, () => clearError('product_id'));
           <!-- Ubicación -->
           <div class="md:col-span-2">
             <label class="text-sm font-medium">Ubicación</label>
-            <input type="text" v-model="form.location"
-                   class="w-full border rounded px-3 py-2"
-                   placeholder="Ubicación del inventario" />
+            <p class="text-xs text-gray-500 mt-1">Selecciona una o varias ubicaciones disponibles.</p>
+            <div class="mt-3 flex flex-wrap gap-3">
+              <label
+                v-for="option in props.ubicacionOptions"
+                :key="option"
+                class="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer bg-white hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  class="h-4 w-4"
+                  :value="option"
+                  v-model="form.ubicaciones"
+                />
+                <span class="text-sm text-gray-700">{{ option }}</span>
+              </label>
+            </div>
+            <div v-if="form.errors.location" class="text-red-600 mt-2 text-sm">
+              {{ form.errors.location }}
+            </div>
           </div>
 
           <!-- Notas -->
@@ -125,12 +155,12 @@ watch(() => form.product_id, () => clearError('product_id'));
 
         <div class="flex justify-end gap-4">
           <Link :href="route('inventory.index')"
-                class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-400">
+                class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded hover:bg-gray-200">
             Cancelar
           </Link>
           <button type="submit"
                   :disabled="form.processing"
-                  class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                  class="px-4 py-2 bg-brand-red text-white rounded hover:bg-brand-wine">
             {{ form.processing ? 'Creando...' : 'Crear Inventario' }}
           </button>
         </div>

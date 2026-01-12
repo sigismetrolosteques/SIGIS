@@ -9,11 +9,16 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Session;
 
 class ResetPasswordController extends Controller
 {
     public function showResetForm(Request $request)
     {
+        if ($request->email) {
+            Session::put('password_reset_email', $request->email);
+        }
+
         return inertia('Auth/ResetPassword', [
             'token' => $request->token,
             'email' => $request->email,

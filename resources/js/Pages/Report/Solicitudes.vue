@@ -13,6 +13,17 @@ const props = defineProps({
   filters: Object,
 });
 
+const statusLabels = {
+  pendiente: 'Normalización',
+  vp_mantenimiento: 'VP. Mantenimiento',
+  vp_soporte: 'VP. Soporte',
+  administracion: 'Administración',
+  compras: 'Compras',
+  normalizacion_final: 'Normalización (Entrega)',
+  aprobado: 'Aprobado',
+  rechazado: 'Rechazado',
+};
+
 const form = useForm({
   from: props.filters.from || '',
   to: props.filters.to || '',
@@ -32,6 +43,10 @@ function formatDate(value) {
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+function formatStatus(value) {
+  return statusLabels[value] ?? value;
 }
 
 // Construir objeto de params (evita mandar keys vacías si quieres)
@@ -91,7 +106,7 @@ function renderCharts(solicitudesData = []) {
       type: 'doughnut',
       data: {
         labels: ['En proceso', 'Aprobado', 'Rechazado'],
-        datasets: [{ data: [enProceso, aprobados, rechazados], backgroundColor: ['#F59E0B','#10B981','#EF4444'] }]
+        datasets: [{ data: [enProceso, aprobados, rechazados], backgroundColor: ['#F9FAFB', '#D62828', '#B91C1C'] }]
       },
       options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
@@ -112,7 +127,7 @@ function renderCharts(solicitudesData = []) {
         datasets: [{
           label: 'Solicitudes',
           data: Object.values(byProduct),
-          backgroundColor: '#3B82F6'
+          backgroundColor: '#D62828'
         }]
       },
       options: {
@@ -142,12 +157,24 @@ onBeforeUnmount(() => destroyCharts());
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Reportes: Solicitudes</h1>
         <div class="flex gap-2">
-          <button @click="exportPdf" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700">Exportar PDF</button>
+          <button @click="exportPdf" class="px-3 py-2 bg-brand-red text-white rounded hover:bg-brand-wine">Exportar PDF</button>
         </div>
       </div>
 
+      <div class="flex flex-wrap gap-3">
+        <Link :href="route('reportes.solicitudes')" class="px-3 py-1.5 rounded-full border border-brand-red bg-brand-red text-white text-sm">
+          Solicitudes
+        </Link>
+        <Link :href="route('reportes.inventario')" class="px-3 py-1.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-brand-gray">
+          Inventario
+        </Link>
+        <Link :href="route('reportes.productos')" class="px-3 py-1.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-brand-gray">
+          Productos
+        </Link>
+      </div>
+
       <!-- filtros -->
-      <div class="bg-white p-4 rounded shadow mb-6">
+      <div class="bg-white p-4 rounded shadow mb-6 border border-gray-200">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label class="block text-sm mb-1">Desde</label>
@@ -181,7 +208,7 @@ onBeforeUnmount(() => destroyCharts());
           </div>
 
           <div>
-            <label class="block text-sm mb-1">Destino</label>
+            <label class="block text-sm mb-1">Origen</label>
             <select v-model="form.from_gerencia_id" class="w-full border rounded px-2 py-1">
               <option value="">-- Todos --</option>
               <option v-for="g in gerencias" :key="g.id" :value="g.id">{{ g.name }}</option>
@@ -199,23 +226,23 @@ onBeforeUnmount(() => destroyCharts());
           </div>
 
           <div class="flex items-end gap-2">
-            <button @click="applyFilters" class="px-3 py-2 bg-green-600 text-white rounded">Aplicar</button>
-            <button @click="resetFilters" class="px-3 py-2 bg-gray-300 rounded">Reset</button>
+            <button @click="applyFilters" class="px-3 py-2 bg-brand-red text-white rounded">Aplicar</button>
+            <button @click="resetFilters" class="px-3 py-2 bg-brand-gray text-brand-charcoal rounded">Reset</button>
           </div>
         </div>
       </div>
 
       <!-- resumen -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-4 rounded shadow">
+        <div class="bg-white p-4 rounded shadow border border-gray-200">
           <div class="text-sm text-gray-500">Total solicitudes</div>
           <div class="text-2xl font-bold">{{ totales.total }}</div>
         </div>
-        <div class="bg-white p-4 rounded shadow">
+        <div class="bg-white p-4 rounded shadow border border-gray-200">
           <div class="text-sm text-gray-500">En proceso</div>
           <div class="text-2xl font-bold">{{ totales.en_proceso }}</div>
         </div>
-        <div class="bg-white p-4 rounded shadow">
+        <div class="bg-white p-4 rounded shadow border border-gray-200">
           <div class="text-sm text-gray-500">Aprobado</div>
           <div class="text-2xl font-bold">{{ totales.aprobado }}</div>
         </div>
@@ -223,24 +250,24 @@ onBeforeUnmount(() => destroyCharts());
 
       <!-- charts -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white p-4 rounded shadow">
+        <div class="bg-white p-4 rounded shadow border border-gray-200">
           <h3 class="font-semibold mb-2">Solicitudes por estado</h3>
           <canvas ref="statusChartRef"></canvas>
         </div>
-        <div class="bg-white p-4 rounded shadow">
-          <h3 class="font-semibold mb-2">Solicitudes por producto (lineal)</h3>
+        <div class="bg-white p-4 rounded shadow border border-gray-200">
+          <h3 class="font-semibold mb-2">Solicitudes por producto (barras)</h3>
           <canvas ref="productChartRef"></canvas>
         </div>
       </div>
 
       <!-- tabla -->
-      <div class="bg-white shadow rounded overflow-hidden">
+      <div class="bg-white shadow rounded overflow-hidden border border-gray-200">
         <table class="w-full">
-          <thead class="bg-gray-100 border-b">
+          <thead class="bg-brand-gray border-b">
             <tr>
               <th class="py-2 px-3 text-left">Código</th>
               <th class="py-2 px-3 text-left">Producto</th>
-              <th class="py-2 px-3 text-left">Destino</th>
+              <th class="py-2 px-3 text-left">Origen</th>
               <th class="py-2 px-3 text-left">Cantidad</th>
               <th class="py-2 px-3 text-left">Estado</th>
               <th class="py-2 px-3 text-left">Fecha</th>
@@ -252,7 +279,7 @@ onBeforeUnmount(() => destroyCharts());
               <td class="py-2 px-3">{{ s.product?.name }}</td>
               <td class="py-2 px-3">{{ s.fromGerencia?.name || s.from_gerencia?.name }}</td>
               <td class="py-2 px-3">{{ s.quantity ?? '-' }}</td>
-              <td class="py-2 px-3 capitalize">{{ s.status }}</td>
+              <td class="py-2 px-3">{{ formatStatus(s.status) }}</td>
               <td class="py-2 px-3">{{ formatDate(s.created_at) }}</td>
             </tr>
           </tbody>

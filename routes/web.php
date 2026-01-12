@@ -15,6 +15,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\RequestController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\AlertController;
 
 // Rutas públicas
 Route::middleware('web')->get('/csrf/refresh', function () {
@@ -57,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('product.edit');
     Route::post('/product/{product}/update', [ProductController::class, 'update'])->name('product.update');
     Route::post('/product/{product}/delete', [ProductController::class, 'destroy'])->name('product.destroy');
+    Route::get('/product/{product}/pdf', [ProductController::class, 'exportPdf'])->name('product.pdf');
     Route::get('/product/{product}', [ProductController::class, 'show'])->name('product.show');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('/inventory/create', [InventoryController::class, 'create'])->name('inventory.create');
@@ -74,12 +76,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/solicitudes/{solicitud}/pdf', [RequestController::class, 'generatePDF'])
         ->name('solicitudes.pdf');
+    Route::get('/solicitudes/{solicitud}/adjunto/{log}', [RequestController::class, 'viewAttachment'])
+        ->name('solicitudes.attachment');
 
     // Botones aprobar/rechazar
     Route::post('/solicitudes/{solicitud}/update-status', [RequestController::class, 'updateStatus'])
         ->name('solicitudes.updateStatus');
     Route::get('/reportes/solicitudes', [ReportController::class, 'index'])->name('reportes.solicitudes');
     Route::get('/reportes/solicitudes/pdf', [ReportController::class, 'exportPDF'])->name('reportes.solicitudes.pdf');
+    Route::get('/reportes/inventario', [ReportController::class, 'inventory'])->name('reportes.inventario');
+    Route::get('/reportes/inventario/pdf', [ReportController::class, 'inventoryPdf'])->name('reportes.inventario.pdf');
+    Route::get('/reportes/productos', [ReportController::class, 'products'])->name('reportes.productos');
+    Route::get('/reportes/productos/pdf', [ReportController::class, 'productsPdf'])->name('reportes.productos.pdf');
+    Route::get('/alertas', [AlertController::class, 'index'])->name('alertas.index');
+    Route::get('/alertas/resumen', [AlertController::class, 'summary'])->name('alertas.summary');
     Route::get('/auditoria', [AuditController::class, 'index'])->name('auditoria.index');
     Route::get('/auditoria/export', [AuditController::class, 'exportCsv'])->name('auditoria.export');
 

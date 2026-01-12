@@ -13,7 +13,6 @@ class Product extends Model
         'code',
         'name',
         'sub_area',
-        'ubicaciones',
         'tipo_material',
         'marcas_sugeridas',
         'modelo',
@@ -23,13 +22,8 @@ class Product extends Model
         'description',
     ];
 
-    protected $casts = [
-        'ubicaciones' => 'array',
-    ];
-
     public function inventories()
-{
-    return $this->hasMany(Inventory::class);
-}
-
+    {
+        return $this->hasMany(Inventory::class);
+    }
 }

@@ -19,14 +19,18 @@ const tipoMaterialLabel = computed(() => {
   return map[props.inventory?.product?.tipo_material] ?? 'Sin clasificación';
 });
 
-const ubicacionesLabel = computed(() => {
-  const ubicaciones = props.inventory?.product?.ubicaciones;
-  if (Array.isArray(ubicaciones) && ubicaciones.length > 0) {
-    return ubicaciones.join(', ');
-  }
-
-  return 'Sin ubicación asignada';
+const formattedCreatedAt = computed(() => {
+  if (!props.inventory?.created_at) return '-';
+  const date = new Date(props.inventory.created_at);
+  if (Number.isNaN(date.getTime())) return props.inventory.created_at;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
 });
+
 </script>
 
 <template>
@@ -34,7 +38,7 @@ const ubicacionesLabel = computed(() => {
     <div class="max-w-4xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <div class="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800">Detalle del Inventario</h1>
+          <h1 class="text-2xl font-bold text-brand-charcoal">Detalle del Inventario</h1>
           <p class="text-sm text-gray-600">
             Consulta la información completa del registro de inventario seleccionado.
           </p>
@@ -42,14 +46,14 @@ const ubicacionesLabel = computed(() => {
         <div class="flex gap-2">
           <Link
             :href="route('inventory.index')"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
           >
             Volver
           </Link>
           <Link
             v-if="canManage"
             :href="route('inventory.edit', inventory.id)"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
           >
             <PencilIcon class="w-4 h-4" />
             <span>Editar</span>
@@ -75,10 +79,6 @@ const ubicacionesLabel = computed(() => {
             <p class="text-sm text-gray-500 uppercase">Tipo de Material</p>
             <p class="text-gray-800">{{ tipoMaterialLabel }}</p>
           </div>
-          <div>
-            <p class="text-sm text-gray-500 uppercase">Ubicaciones del producto</p>
-            <p class="text-gray-800">{{ ubicacionesLabel }}</p>
-          </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <p class="text-sm text-gray-500 uppercase">Cantidad total</p>
@@ -96,6 +96,10 @@ const ubicacionesLabel = computed(() => {
           <div>
             <p class="text-sm text-gray-500 uppercase">Notas</p>
             <p class="text-gray-800 whitespace-pre-line">{{ inventory.notes || 'Sin notas registradas' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 uppercase">Fecha de creación</p>
+            <p class="text-gray-800">{{ formattedCreatedAt }}</p>
           </div>
         </div>
 

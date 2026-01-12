@@ -43,7 +43,7 @@ function showMessage(type, text) {
 
     <AdminLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-brand-charcoal">
                 Perfil de Usuario
             </h2>
         </template>
@@ -53,7 +53,7 @@ function showMessage(type, text) {
 
                 <!-- Mensaje global -->
                 <div v-if="message"
-                    :class="messageType === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'"
+                    :class="messageType === 'success' ? 'bg-brand-gray border-brand-red/40 text-brand-charcoal' : 'bg-brand-tint border-brand-wine text-brand-wine'"
                     class="mb-6 border px-4 py-3 rounded relative" role="alert">
                     <strong class="font-bold" v-if="messageType === 'success'">¡Éxito! </strong>
                     <strong class="font-bold" v-else>¡Error! </strong>

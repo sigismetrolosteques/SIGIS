@@ -31,7 +31,7 @@ const handleChange = (event) => {
         :value="modelValue"
         @change="handleChange"
         :required="required"
-        class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full"
+        class="rounded-lg border-brand-border-strong bg-brand-white text-brand-charcoal shadow-sm w-full placeholder:text-gray-400 focus:border-brand-red focus:ring-brand-red focus:ring-2"
     >
         <option 
             v-for="option in options" 

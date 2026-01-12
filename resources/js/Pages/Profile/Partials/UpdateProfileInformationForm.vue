@@ -46,7 +46,7 @@ const submit = () => {
                 Actualiza la información de tu cuenta y la dirección de correo electrónico.
             </p>
         </header>
-          <div v-if="flash.success" class="mb-4 p-4 bg-green-100 text-green-700 rounded">
+          <div v-if="flash.success" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
             {{ flash.success }}
         </div>
        <form @submit.prevent="submit" class="mt-6 space-y-6">
@@ -87,7 +87,7 @@ const submit = () => {
                     id="gerencia"
                     type="text"
                     :value="gerenciaName"
-                    class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 px-3 py-2 text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    class="mt-1 block w-full rounded-md border-gray-300 bg-brand-gray px-3 py-2 text-brand-charcoal shadow-sm focus:border-brand-red focus:ring-brand-red"
                     disabled
                     readonly
                 />
@@ -100,7 +100,7 @@ const submit = () => {
                         :href="route('verification.send')"
                         method="post"
                         as="button"
-                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2"
                     >
                         Haz clic aquí para reenviar el correo de verificación.
                     </Link>
@@ -108,7 +108,7 @@ const submit = () => {
 
                 <div
                     v-show="status === 'verification-link-sent'"
-                    class="mt-2 text-sm font-medium text-green-600"
+                    class="mt-2 text-sm font-medium text-brand-red"
                 >
                     Se ha enviado un nuevo enlace de verificación a tu correo.
                 </div>

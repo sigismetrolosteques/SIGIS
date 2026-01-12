@@ -65,7 +65,8 @@ class User extends Authenticatable
         'security_answer_1' => 'hashed',
         'security_answer_2' => 'hashed',
         'security_answer_3' => 'hashed',
-        'is_first_login' => 'boolean'
+        'is_first_login' => 'boolean',
+        'alerts_seen_at' => 'datetime',
     ];
 
     /**

@@ -45,10 +45,8 @@ const submit = () => {
         </div>
 
         <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
-            <div class="mb-4">
-                <BackButton fallbackRoute="/" />
-            </div>
             <div class="text-center">
+				<h3 class="text-3xl font-bold text-gray-900 mb-3">SIGIS</h3>
                 <h2 class="text-3xl font-bold text-red-600">Verificación de Seguridad</h2>
                 <p class="mt-2 text-sm text-gray-600">
                     Por favor, responde tus preguntas de seguridad
@@ -121,14 +119,15 @@ const submit = () => {
                 </div>
             </form>
 
-            <!-- Enlace para volver atrás -->
-            <div class="mt-6 text-center">
+            <!-- Enlaces para volver -->
+            <div class="mt-6 flex flex-col items-center gap-3">
                 <a @click.prevent="$inertia.visit(route('password.request'))" 
                    class="text-sm text-red-600 hover:text-red-800 cursor-pointer">
                     Volver a ingresar email
                 </a>
+                <!--BackButton fallbackRoute="/login" label="Volver a inicio de sesión" :force-fallback="true" /-->
             </div>
-    
+
       </div>
     </main>
 

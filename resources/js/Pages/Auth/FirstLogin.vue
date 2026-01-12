@@ -108,7 +108,6 @@ const closeModal = () => {
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
 
         <div class="w-full max-w-2xl space-y-4">
-            <BackButton fallbackRoute="/" />
 
             <div class="bg-white rounded-xl shadow-lg overflow-hidden">
                 <!-- Header -->
@@ -116,18 +115,19 @@ const closeModal = () => {
                     <div class="flex items-center justify-between">
                         <img src="/img/Metro_Los_Teques_Logo_Boceto.svg.png" alt="Logo Metro Los Teques"
                             class="mx-auto h-auto w-[130px]">
-                        <div>
-                            <h1 class="text-2xl font-bold">Configuración Inicial de Seguridad</h1>
-                            <p class="text-blue-100">Complete su perfil de seguridad</p>
-                        </div>
-                        <div class="bg-gray-500 rounded-full p-3">
+						<div>
+							<h1 class="text-2xl font-bold">Configuración Inicial de Seguridad</h1>
+							<p class="text-white/80">Complete su perfil de seguridad</p>
+						</div>
+						<div class="bg-gray-500 rounded-full p-3">
                             <LockClosedIcon class="h-6 w-6" />
                         </div>
                     </div>
                 </div>
-
+				
                 <!-- Contenido -->
                 <div class="p-8">
+												
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-gray-800">Bienvenido, {{ email }}</h2>
                         <p class="text-gray-600">
@@ -153,10 +153,10 @@ const closeModal = () => {
                                     :key="index"
                                     class="flex items-center"
                                 >
-                                    <CheckCircleIcon v-if="req.valid" class="h-4 w-4 text-green-500 mr-2" />
+                                    <CheckCircleIcon v-if="req.valid" class="h-4 w-4 text-brand-red mr-2" />
                                     <ExclamationCircleIcon v-else class="h-4 w-4 text-gray-400 mr-2" />
                                     <span
-                                        :class="{ 'text-gray-500': !req.valid, 'text-green-600': req.valid }"
+                                        :class="{ 'text-gray-500': !req.valid, 'text-brand-red': req.valid }"
                                         class="text-sm"
                                     >
                                         {{ req.text }}
@@ -226,14 +226,22 @@ const closeModal = () => {
                             <button
                                 type="submit"
                                 :disabled="form.processing"
-                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-75 disabled:cursor-not-allowed"
+                                class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-red transition disabled:opacity-75 disabled:cursor-not-allowed"
                             >
                                 <span v-if="form.processing">Guardando configuración...</span>
-                                <span v-else>Guardar Configuración de Seguridad</span>
-                            </button>
-                        </div>
-                    </form>
+                        <span v-else>Guardar Configuración de Seguridad</span>
+                    </button>
+                    </div>
+                </form>
+
+                <div class="mt-6 flex justify-center">
+					<a @click.prevent="$inertia.visit(route('login'))" 
+					   class="text-sm text-red-600 hover:text-red-800 cursor-pointer">
+						Volver a inicio de sesión
+					</a>
+                    <!--BackButton fallbackRoute="/login" label="Volver a inicio de sesión" :force-fallback="true" /-->
                 </div>
+            </div>
 
                 <!-- Footer -->
                 <div class="bg-gray-50 px-6 py-4 text-center">

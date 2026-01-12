@@ -58,11 +58,11 @@ onMounted(() => {
 
         <div class="mt-6 flex justify-end space-x-4">
           <button @click="showDeleteModal = false"
-            class="px-4 py-2 text-sm text-white bg-gray-500 hover:text-white hove:bg-gray-400 rounded-md border border-gray-300">
+            class="px-4 py-2 text-sm text-brand-charcoal bg-brand-gray hover:bg-gray-200 rounded-md border border-gray-300">
             Cancelar
           </button>
 
-          <button @click="destroyUser" class="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md">
+          <button @click="destroyUser" class="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-brand-wine hover:bg-brand-red rounded-md">
             <TrashIcon class="w-4 h-4" />
             <span>Eliminar</span>
           </button>
@@ -70,10 +70,10 @@ onMounted(() => {
       </div>
     </Modal>
 
-    <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+    <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
       {{ successMessage }}
     </div>
-    <div v-if="$page.props.errors && $page.props.errors.error" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+    <div v-if="$page.props.errors && $page.props.errors.error" class="mb-4 p-4 bg-brand-tint border border-brand-wine text-brand-wine rounded">
       {{ $page.props.errors.error }}
     </div>
 
@@ -82,18 +82,18 @@ onMounted(() => {
         {{ is_super_admin ? 'Gestión de Usuarios' : 'Mi Perfil' }}
       </h1>
       <Link v-if="can.create" :href="route('user.create')"
-        class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        class="inline-block bg-brand-red text-white px-4 py-2 rounded hover:bg-brand-wine transition">
       Nuevo Usuario
       </Link>
     </div>
 
-    <div v-if="users.data.length === 0" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+    <div v-if="users.data.length === 0" class="bg-brand-gray border-l-4 border-brand-red text-brand-charcoal p-4 mb-4">
       <p>No se encontraron usuarios.</p>
     </div>
 
     <div v-else class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
       <table class="w-full">
-        <thead class="bg-gray-100 border-b border-gray-300">
+        <thead class="bg-brand-gray border-b border-gray-300">
           <tr>
             <!--th class="py-3 px-4 text-center font-semibold text-gray-700">ID</th-->
             <th class="py-3 px-4 text-center font-semibold text-gray-700">Nombre</th>
@@ -106,7 +106,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="u in users.data" :key="u.id" class="border-b border-gray-200 hover:bg-gray-50">
+          <tr v-for="u in users.data" :key="u.id" class="border-b border-gray-200 hover:bg-brand-gray">
             <!--td class="py-3 px-4 text-center">{{ u.id }}</td-->
             <td class="py-3 px-4 text-center">{{ u.name }}</td>
             <td class="py-3 px-4 text-center">{{ u.email }}</td>
@@ -127,7 +127,7 @@ onMounted(() => {
               <div class="flex justify-center items-center gap-3">
                 <Link
                   :href="route('user.edit', u.id)"
-                  class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                  class="inline-flex items-center justify-center bg-brand-gray text-brand-charcoal w-10 h-10 rounded-full hover:bg-gray-200 transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Editar"
                 >
                   <PencilIcon class="w-4 h-4" />
@@ -136,7 +136,7 @@ onMounted(() => {
                   v-if="can.delete && $page.props.auth.user.id !== u.id"
                   @click.prevent="confirmDelete(u.id)"
                   type="button"
-                  class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                  class="inline-flex items-center justify-center bg-brand-wine text-white w-10 h-10 rounded-full hover:bg-brand-red transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Eliminar"
                 >
                   <TrashIcon class="w-4 h-4" />

@@ -59,28 +59,29 @@ const submit = () => {
 </script>
 
 <template>
-  <div
-    class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-red-600 via-gray-400 to-gray-500 px-4 py-12">
-    <header class="bg-white py-4 px-6 flex justify-center items-center border-b border-gray-200 h-32">
+  <div class="min-h-screen flex flex-col bg-white">
+    <header class="bg-white py-4 px-6 flex justify-center items-center border-b border-gray-200 h-32 w-full">
       <img src="/img/CINTILLO.png" alt="Ministerio del Transporte" class="h-full w-auto object-contain">
     </header>
 
-    <Head title="Restablecer Contraseña" />
+    <main
+      class="relative flex-grow flex flex-col items-center justify-center bg-gradient-to-br from-red-600 via-gray-400 to-gray-500 px-4 py-12 overflow-hidden"
+    >
+      <Head title="Restablecer Contraseña" />
 
-    <div class="absolute inset-0 bg-cover bg-center opacity-30 animate-fade bg-gradient-to-br from-red-600 via-gray-800"
-      :style="{ backgroundImage: `url('/img/login.jpeg')` }">
-    </div>
+      <div
+        class="absolute inset-0 bg-cover bg-center opacity-30 animate-fade bg-gradient-to-br from-red-600 via-gray-800 pointer-events-none"
+        :style="{ backgroundImage: `url('/img/login.jpeg')` }"
+      ></div>
 
-    <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
-      <div class="mb-4">
-        <BackButton fallbackRoute="/" />
-      </div>
-      <div class="text-center">
-        <h2 class="text-3xl font-bold text-red-600">Restablecer Contraseña</h2>
-        <p class="mt-2 text-sm text-gray-600">
-          Ingresa tu nueva contraseña
-        </p>
-      </div>
+      <div class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
+        <div class="text-center">
+				<h3 class="text-3xl font-bold text-gray-900 mb-3">SIGIS</h3>
+          <h2 class="text-3xl font-bold text-red-600">Restablecer Contraseña</h2>
+          <p class="mt-2 text-sm text-gray-600">
+            Ingresa tu nueva contraseña
+          </p>
+        </div>
 
       <form @submit.prevent="submit" class="space-y-4 mt-6">
         <input type="hidden" v-model="form.token" />
@@ -108,22 +109,22 @@ const submit = () => {
             <p class="font-medium mb-1">La contraseña debe contener:</p>
             <ul class="space-y-1">
               <li class="flex items-center"
-                :class="passwordRequirements.minLength.valid ? 'text-green-600' : 'text-red-600'">
+                :class="passwordRequirements.minLength.valid ? 'text-brand-red' : 'text-brand-wine'">
                 <span v-html="passwordRequirements.minLength.valid ? '&#10004;' : '&#10006;'"></span>
                 <span class="ml-1">Mínimo 8 caracteres</span>
               </li>
               <li class="flex items-center"
-                :class="passwordRequirements.hasUpperCase.valid ? 'text-green-600' : 'text-red-600'">
+                :class="passwordRequirements.hasUpperCase.valid ? 'text-brand-red' : 'text-brand-wine'">
                 <span v-html="passwordRequirements.hasUpperCase.valid ? '&#10004;' : '&#10006;'"></span>
                 <span class="ml-1">Al menos 1 letra mayúscula</span>
               </li>
               <li class="flex items-center"
-                :class="passwordRequirements.hasNumber.valid ? 'text-green-600' : 'text-red-600'">
+                :class="passwordRequirements.hasNumber.valid ? 'text-brand-red' : 'text-brand-wine'">
                 <span v-html="passwordRequirements.hasNumber.valid ? '&#10004;' : '&#10006;'"></span>
                 <span class="ml-1">Al menos 1 número</span>
               </li>
               <li class="flex items-center"
-                :class="passwordRequirements.hasSpecialChar.valid ? 'text-green-600' : 'text-red-600'">
+                :class="passwordRequirements.hasSpecialChar.valid ? 'text-brand-red' : 'text-brand-wine'">
                 <span v-html="passwordRequirements.hasSpecialChar.valid ? '&#10004;' : '&#10006;'"></span>
                 <span class="ml-1">Al menos 1 símbolo (* . - $ #)</span>
               </li>
@@ -139,7 +140,7 @@ const submit = () => {
           <InputError :message="form.errors.password_confirmation" class="mt-1" />
 
           <div v-if="form.password_confirmation" class="mt-1 text-xs"
-            :class="passwordsMatch ? 'text-green-600' : 'text-red-600'">
+            :class="passwordsMatch ? 'text-brand-red' : 'text-brand-wine'">
             <span
               v-html="passwordsMatch ? '&#10004; Las contraseñas coinciden' : '&#10006; Las contraseñas no coinciden'"></span>
           </div>
@@ -156,12 +157,15 @@ const submit = () => {
           </button>
         </div>
       </form>
-    </div>
-    <br><br><br>
-    <footer class="py-4 px-6 bg-white border-t border-gray-200/80 text-center text-sm text-gray-500">
-      <div class="max-w-7xl mx-auto">
-        <img src="/img/cintillo-transporte.png" alt="Logo Metro Los Teques" class="mx-auto h-20 w-150">
+
+      <div class="mt-6 text-center">
+		<a @click.prevent="$inertia.visit(route('password.questions'))" 
+					   class="text-sm text-red-600 hover:text-red-800 cursor-pointer">
+						Volver a verificación de seguridad
+					</a>
+        <!--BackButton :fallback-route="route('password.questions')" label="Volver a verificación de seguridad" :force-fallback="true" /-->
       </div>
-    </footer>
+    </div>
+    </main>
   </div>
 </template>

@@ -13,7 +13,6 @@ const form = useForm({
 const props = defineProps({
     errors: Object
 })
-console.log(props.errors);
 const submit = () => {
     form.post(route('password.email'), {
         onError: (errors) => {
@@ -45,10 +44,8 @@ const submit = () => {
 
         <div
             class="relative bg-white/80 backdrop-blur-lg border border-white/30 rounded-3xl p-8 max-w-md w-full shadow-xl">
-            <div class="mb-4">
-                <BackButton fallbackRoute="/" />
-            </div>
             <div class="text-center">
+				<h3 class="text-3xl font-bold text-gray-900 mb-3">SIGIS</h3>
                 <h2 class="text-3xl font-bold text-red-600">¿Olvidaste tu contraseña?</h2>
                 <p class="mt-2 text-sm text-gray-600">
                     Ingresa tu correo para continuar
@@ -58,7 +55,7 @@ const submit = () => {
             <form @submit.prevent="submit" class="space-y-4 mt-6">
                 <!-- Email -->
                 <div>
-                    <InputLabel for="email" value="Correo electrónico" />
+                    <!--InputLabel for="email" value="Correo electrónico" /-->
                     <div class="relative mt-1">
                         <EnvelopeIcon class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                         <TextInput
@@ -84,6 +81,14 @@ const submit = () => {
                 </div>
 
             </form>
+
+            <div class="mt-6 text-center">
+					<a @click.prevent="$inertia.visit(route('login'))" 
+					   class="text-sm text-red-600 hover:text-red-800 cursor-pointer">
+						Volver a inicio de sesión
+					</a>
+                <!--BackButton fallbackRoute="/login" label="Volver a inicio de sesión" :force-fallback="true" /-->
+            </div>
         </div>
 
     </main>

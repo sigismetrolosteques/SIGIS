@@ -224,7 +224,7 @@ const emit = defineEmits(['message']);
             />
         </div>
 
-        <div class="p-4 bg-blue-50 text-blue-800 rounded-lg text-sm">
+        <div class="p-4 bg-brand-gray text-brand-charcoal rounded-lg text-sm">
             <p>Si actualizas una respuesta de seguridad, debes actualizar las tres por motivos de seguridad.</p>
         </div>
 

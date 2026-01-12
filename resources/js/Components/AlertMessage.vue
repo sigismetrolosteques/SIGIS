@@ -15,8 +15,8 @@ const props = defineProps({
   <div
     :class="[
       'border px-4 py-3 rounded relative mb-4',
-      type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : '',
-      type === 'error' ? 'bg-red-100 border-red-400 text-red-700' : '',
+      type === 'success' ? 'bg-status-approved-bg border-status-approved-brd text-status-approved-text' : '',
+      type === 'error' ? 'bg-status-danger-bg border-status-danger-brd text-status-danger-text' : '',
     ]"
     role="alert"
   >

@@ -75,6 +75,14 @@ class AuditController extends Controller
         $query = Audit::with(['user', 'auditable']);
 
         // aplicar mismos filtros que index (puedes extraer a método si quieres)
+        if ($request->query('q')) {
+            $q = $request->query('q');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('action', 'like', "%{$q}%")
+                    ->orWhereJsonContains('new_values', $q)
+                    ->orWhereJsonContains('old_values', $q);
+            });
+        }
         if ($request->query('action')) {
             $query->where('action', $request->query('action'));
         }
@@ -97,8 +105,9 @@ class AuditController extends Controller
 
         $response = new StreamedResponse(function () use ($query) {
             $handle = fopen('php://output', 'w+');
-            // Cabezera CSV
-            fputcsv($handle, ['ID','Usuario','Modelo','Modelo ID','Acción','Old','New','IP','User Agent','Fecha']);
+            // BOM para Excel y encabezado
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['ID','Usuario','Modelo','Modelo ID','Acción','Valores antiguos','Valores nuevos','IP','User Agent','Fecha'], ';');
 
             $query->orderBy('created_at', 'desc')->chunk(200, function ($rows) use ($handle) {
                 foreach ($rows as $row) {
@@ -113,7 +122,7 @@ class AuditController extends Controller
                         $row->ip_address,
                         $row->user_agent,
                         $row->created_at ? $row->created_at->toDateTimeString() : '',
-                    ]);
+                    ], ';');
                 }
             });
 

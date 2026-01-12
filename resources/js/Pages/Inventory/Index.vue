@@ -119,33 +119,59 @@ const resetTipoMaterialFilter = () => {
       </div>
     </Modal>
 
-    <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+    <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
       {{ successMessage }}
     </div>
+    <div v-if="$page.props.errors?.inventory" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
+      {{ $page.props.errors.inventory }}
+    </div>
 
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestión de Inventario</h1>
-      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <form @submit.prevent="applyFilters" class="flex items-center gap-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
+      <h1 class="text-2xl font-bold text-brand-charcoal">Gestión de Inventario</h1>
+      <div class="flex flex-wrap gap-2">
+        <Link
+          :href="route('reportes.inventario')"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-brand-gray text-brand-charcoal rounded-md shadow-sm hover:bg-gray-200 transition"
+          title="Ver reportes"
+        >
+          Reportes
+        </Link>
+        <Link
+          v-if="canManage"
+          :href="route('inventory.create')"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-brand-red text-white rounded-md shadow-sm hover:bg-brand-wine transition flex-shrink-0"
+          title="Nuevo Registro"
+        >
+          Nuevo Inventario
+        </Link>
+      </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
+      <form @submit.prevent="applyFilters" class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             v-model="filterSearch"
             type="text"
             placeholder="Buscar por código o nombre"
-            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none w-64"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:outline-none w-full md:w-64"
           />
-          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            Buscar
-          </button>
-          <button
-            type="button"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-            @click="resetFilters"
-          >
-            Limpiar
-          </button>
-        </form>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-gray-700">Tipo de Material:</span>
+          <div class="flex items-center gap-2">
+            <button type="submit" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition">
+              Buscar
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
+              @click="resetFilters"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 md:justify-end">
+          <span class="text-sm font-medium text-gray-700">Filtrar por:</span>
           <button
             v-for="option in props.tipoMaterialOptions"
             :key="option.value"
@@ -154,8 +180,8 @@ const resetTipoMaterialFilter = () => {
             :class="[
               'px-3 py-1.5 rounded-full border transition text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
               selectedTipoMaterial.includes(option.value)
-                ? 'bg-blue-600 text-white border-blue-600 shadow focus:ring-blue-400'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 focus:ring-gray-300'
+                ? 'bg-brand-red text-white border-brand-red shadow focus:ring-brand-red/60'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-brand-gray focus:ring-gray-300'
             ]"
           >
             {{ option.label }}
@@ -163,33 +189,25 @@ const resetTipoMaterialFilter = () => {
           <button
             v-if="selectedTipoMaterial.length"
             type="button"
-            class="text-xs text-blue-600 hover:text-blue-700 underline"
+            class="text-xs text-brand-red hover:text-brand-wine underline"
             @click="resetTipoMaterialFilter"
           >
             Limpiar
           </button>
         </div>
-        <Link
-          v-if="canManage"
-          :href="route('inventory.create')"
-          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 transition flex-shrink-0"
-          title="Nuevo Registro"
-        >
-          Nuevo
-        </Link>
-      </div>
+      </form>
     </div>
 
     <div
       v-if="inventories.data.length === 0"
-      class="bg-yellow-100 border border-yellow-200 text-yellow-800 px-4 py-3 rounded"
+      class="bg-brand-gray border-l-4 border-brand-red text-brand-charcoal p-4 mb-4"
     >
       No hay registros de inventario.
     </div>
 
     <div v-else class="bg-white shadow rounded border overflow-hidden">
       <table class="w-full">
-        <thead class="bg-gray-100 border-b">
+        <thead class="bg-brand-gray border-b">
           <tr>
             <th class="py-3 px-4 text-left">Foto</th>
             <th class="py-3 px-4 text-left">Código</th>
@@ -233,7 +251,7 @@ const resetTipoMaterialFilter = () => {
               <div class="flex justify-center items-center gap-3">
                 <Link
                   :href="route('inventory.show', inv.id)"
-                  class="inline-flex items-center justify-center bg-blue-600 text-white w-10 h-10 rounded-full hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  class="inline-flex items-center justify-center bg-brand-red text-white w-10 h-10 rounded-full hover:bg-brand-wine transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Ver detalle"
                 >
                   <EyeIcon class="w-4 h-4" />
@@ -241,14 +259,14 @@ const resetTipoMaterialFilter = () => {
                 <template v-if="canManage">
                   <Link
                     :href="route('inventory.edit', inv.id)"
-                    class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    class="inline-flex items-center justify-center bg-brand-gray text-brand-charcoal w-10 h-10 rounded-full hover:bg-gray-200 transition-all duration-200 shadow-md hover:shadow-lg"
                     title="Editar"
                   >
                     <PencilIcon class="w-4 h-4" />
                   </Link>
                   <button
                     @click.prevent="confirmDelete(inv.id)"
-                    class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    class="inline-flex items-center justify-center bg-brand-wine text-white w-10 h-10 rounded-full hover:bg-brand-red transition-all duration-200 shadow-md hover:shadow-lg"
                     title="Eliminar"
                   >
                     <TrashIcon class="w-4 h-4" />

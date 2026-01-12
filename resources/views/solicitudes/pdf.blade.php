@@ -10,6 +10,7 @@
             color: #333;
             margin: 0;
             padding: 20px;
+            padding-bottom: 110px;
         }
         .pdf-header {
             text-align: center;
@@ -24,7 +25,7 @@
             text-align: center;
             font-size: 22px;
             margin-bottom: 20px;
-            color: #2c3e50;
+            color: #D62828;
         }
         .section {
             margin-bottom: 15px;
@@ -39,16 +40,28 @@
             display: inline-block;
         }
         .box {
-            border: 1px solid #ccc;
+            border: 1px solid #F9FAFB;
             padding: 15px;
-            border-radius: 5px;
-            background: #f9f9f9;
+            border-radius: 6px;
+            background: #FFFFFF;
         }
         .footer {
             margin-top: 40px;
             text-align: center;
             font-size: 12px;
             color: #777;
+        }
+        .pdf-footer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            text-align: center;
+        }
+        .pdf-footer img {
+            width: 100%;
+            max-height: 90px;
+            object-fit: contain;
         }
     </style>
 </head>
@@ -80,10 +93,6 @@
         <div class="section">
             <span class="label">Origen:</span>
             <span class="value">{{ $solicitud->fromGerencia->name ?? '-' }}</span>
-        </div>
-        <div class="section">
-            <span class="label">Destino:</span>
-            <span class="value">{{ $solicitud->toGerencia->name ?? '-' }}</span>
         </div>
         @php
             $statusLabel = \Illuminate\Support\Str::of($solicitud->status)->replace('_', ' ')->title();
@@ -121,6 +130,10 @@
 
     <div class="footer">
         Generado automáticamente | Sistema de Gestión de Solicitudes
+    </div>
+
+    <div class="pdf-footer">
+        <img src="{{ public_path('img/CINTILLO MANTENIMIENTO INFERIOR RECORTADO.png') }}" alt="Cintillo de mantenimiento">
     </div>
 
 </body>

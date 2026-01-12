@@ -10,10 +10,6 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  ubicacionOptions: {
-    type: Array,
-    default: () => [],
-  },
 });
 
 const successMessage = ref(props.flash?.success || '');
@@ -22,7 +18,6 @@ const generalError = ref('');
 const form = useForm({
   name: '',
   sub_area: '',
-  ubicaciones: [],
   tipo_material: '',
   marcas_sugeridas: '',
   modelo: '',
@@ -31,6 +26,7 @@ const form = useForm({
   image: null,
   description: '',
 });
+
 
 const clearError = (field) => {
   if (form.errors[field]) {
@@ -100,7 +96,6 @@ watch(() => form.marcas_sugeridas, () => clearError('marcas_sugeridas'));
 watch(() => form.modelo, () => clearError('modelo'));
 watch(() => form.dimensiones, () => clearError('dimensiones'));
 watch(() => form.especificaciones_tecnicas, () => clearError('especificaciones_tecnicas'));
-watch(() => form.ubicaciones, () => clearError('ubicaciones'), { deep: true });
 watch(() => form.tipo_material, () => clearError('tipo_material'));
 </script>
 
@@ -112,7 +107,7 @@ watch(() => form.tipo_material, () => clearError('tipo_material'));
         El código del producto se generará automáticamente con el formato <span class="font-mono">PRD-XXXXXXXXXXXX</span>.
       </p>
 
-      <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+      <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
         {{ successMessage }}
       </div>
       <div v-if="generalError" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
@@ -172,28 +167,6 @@ watch(() => form.tipo_material, () => clearError('tipo_material'));
           </div>
 
           <div class="md:col-span-2">
-            <label class="text-sm font-medium">Ubicación</label>
-            <div class="mt-2 flex flex-wrap gap-3">
-              <label
-                v-for="option in props.ubicacionOptions"
-                :key="option"
-                class="inline-flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer bg-white hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  class="h-4 w-4"
-                  :value="option"
-                  v-model="form.ubicaciones"
-                />
-                <span class="text-sm text-gray-700">{{ option }}</span>
-              </label>
-            </div>
-            <div v-if="form.errors.ubicaciones" class="text-red-600 mt-1 text-sm">
-              {{ form.errors.ubicaciones }}
-            </div>
-          </div>
-
-          <div class="md:col-span-2">
             <label class="text-sm font-medium">Marcas sugeridas</label>
             <textarea
               v-model="form.marcas_sugeridas"
@@ -221,15 +194,16 @@ watch(() => form.tipo_material, () => clearError('tipo_material'));
             </div>
           </div>
 
-          <div>
+          <div class="md:col-span-2">
             <label class="text-sm font-medium">Dimensiones</label>
-            <input
+            <textarea
               v-model="form.dimensiones"
               @input="clearError('dimensiones')"
               :class="{ 'border-red-500': form.errors.dimensiones }"
               class="w-full border rounded px-3 py-2"
-              placeholder="Ejemplo: 50cm x 30cm"
-            />
+              placeholder="Describe dimensiones, tolerancias u otras medidas relevantes"
+              rows="3"
+            ></textarea>
             <div v-if="form.errors.dimensiones" class="text-red-600 mt-1 text-sm">
               {{ form.errors.dimensiones }}
             </div>
@@ -279,12 +253,12 @@ watch(() => form.tipo_material, () => clearError('tipo_material'));
           </div>
         </div>
 
-        <div class="flex justify-end gap-4">
+          <div class="flex justify-end gap-4">
           <Link :href="route('product.index')"
-            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-400">Cancelar</Link>
+            class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded hover:bg-gray-200">Cancelar</Link>
           <button type="submit"
             :disabled="form.processing"
-            class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+            class="px-4 py-2 bg-brand-red text-white rounded hover:bg-brand-wine">
             {{ form.processing ? 'Creando...' : 'Crear Producto' }}
           </button>
         </div>

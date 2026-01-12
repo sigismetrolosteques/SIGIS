@@ -28,15 +28,6 @@ class RequestController extends Controller
         'rechazado' => 'Rechazado',
     ];
 
-    protected array $workflowOrder = [
-        'pendiente',
-        'vp_mantenimiento',
-        'vp_soporte',
-        'administracion',
-        'compras',
-        'normalizacion_final',
-    ];
-
     protected array $stageGerencias = [
         'pendiente' => 'Normalización',
         'vp_mantenimiento' => 'VP. Mantenimiento',
@@ -118,6 +109,27 @@ class RequestController extends Controller
 
     public function store(Request $request)
     {
+        $messages = [
+            'request_type.required' => 'El tipo de solicitud es obligatorio.',
+            'request_type.in' => 'El tipo de solicitud seleccionado no es válido.',
+            'product_id.required' => 'Debes seleccionar un producto.',
+            'product_id.exists' => 'El producto seleccionado no es válido.',
+            'inventory_id.required_if' => 'Debes seleccionar un inventario cuando la solicitud es de inventario.',
+            'inventory_id.exists' => 'El inventario seleccionado no es válido.',
+            'quantity.required' => 'La cantidad es obligatoria.',
+            'quantity.integer' => 'La cantidad debe ser un número entero.',
+            'quantity.min' => 'La cantidad debe ser al menos 1.',
+            'description.string' => 'La descripción debe ser un texto válido.',
+            'return_date.date' => 'La fecha de devolución no tiene un formato válido.',
+        ];
+
+        $attributes = [
+            'product_id' => 'producto',
+            'inventory_id' => 'inventario',
+            'quantity' => 'cantidad',
+            'return_date' => 'fecha de devolución',
+        ];
+
         $data = $request->validate([
             'request_type' => 'required|in:inventario,compra',
             'product_id' => 'required|exists:products,id',
@@ -125,7 +137,7 @@ class RequestController extends Controller
             'quantity' => 'required|integer|min:1',
             'description' => 'nullable|string',
             'return_date' => 'nullable|date',
-        ]);
+        ], $messages, $attributes);
 
         $user = Auth::user();
         $product = Product::findOrFail($data['product_id']);
@@ -141,7 +153,7 @@ class RequestController extends Controller
             return back()->withErrors(['quantity' => 'La cantidad solicitada supera el stock disponible']);
         }
 
-        if (in_array($product->tipo_material, ['equipos', 'herramientas'], true) && empty($data['return_date'])) {
+        if ($inventory && in_array($product->tipo_material, ['equipos', 'herramientas'], true) && empty($data['return_date'])) {
             return back()->withErrors(['return_date' => 'Debe indicar una fecha de devolución para equipos y herramientas.']);
         }
 
@@ -150,7 +162,7 @@ class RequestController extends Controller
             return back()->withErrors(['general' => 'No se encontró la gerencia de Normalización.']);
         }
 
-        $returnDate = in_array($product->tipo_material, ['equipos', 'herramientas'], true)
+        $returnDate = ($inventory && in_array($product->tipo_material, ['equipos', 'herramientas'], true))
             ? ($data['return_date'] ?? null)
             : null;
 
@@ -192,12 +204,26 @@ class RequestController extends Controller
 
     public function updateStatus(Request $request, Solicitud $solicitud)
     {
+        $messages = [
+            'action.required' => 'Debes seleccionar una acción.',
+            'action.in' => 'La acción seleccionada no es válida.',
+            'justification.required' => 'La justificación es obligatoria.',
+            'justification.string' => 'La justificación debe ser un texto válido.',
+            'justification.min' => 'La justificación debe tener al menos :min caracteres.',
+            'justification.max' => 'La justificación no puede superar :max caracteres.',
+            'attachment.file' => 'El documento adjunto debe ser un archivo válido.',
+            'attachment.max' => 'El documento adjunto no puede superar los 5 MB.',
+            'attachment.mimes' => 'El documento adjunto debe ser un archivo de tipo PDF o imagen.',
+            'approved_quantity.integer' => 'La cantidad aprobada debe ser un número entero.',
+            'approved_quantity.min' => 'La cantidad aprobada debe ser al menos 1.',
+        ];
+
         $data = $request->validate([
             'action' => 'required|in:approve_stage,reject_stage,compras_approve,compras_reject,finalize_order',
             'justification' => 'required|string|min:3|max:1000',
             'attachment' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png',
             'approved_quantity' => 'nullable|integer|min:1',
-        ]);
+        ], $messages);
 
         $role = $this->resolveWorkflowRole(Auth::user());
         $inventory = $solicitud->inventory_id ? Inventory::find($solicitud->inventory_id) : null;
@@ -215,7 +241,11 @@ class RequestController extends Controller
         try {
             switch ($data['action']) {
                 case 'approve_stage':
-                    $allowedStages = ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion'];
+                    $isInventoryRequest = $this->isInventoryRequest($solicitud);
+                    $allowedStages = $isInventoryRequest
+                        ? ['pendiente', 'vp_mantenimiento']
+                        : ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion'];
+
                     if (!in_array($solicitud->status, $allowedStages, true)) {
                         throw ValidationException::withMessages([
                             'action' => 'La acción seleccionada no es válida para el estatus actual.',
@@ -224,11 +254,33 @@ class RequestController extends Controller
 
                     $this->ensureRoleForStage($solicitud->status, $role);
 
-                    $nextStage = $this->getNextStage($solicitud->status);
+                    $nextStage = $this->getNextStage($solicitud, $solicitud->status);
+
                     if (!$nextStage) {
-                        throw ValidationException::withMessages([
-                            'action' => 'No se pudo determinar el siguiente paso del flujo.',
-                        ]);
+                        if (!$isInventoryRequest) {
+                            throw ValidationException::withMessages([
+                                'action' => 'No se pudo determinar el siguiente paso del flujo.',
+                            ]);
+                        }
+
+                        $remaining = $solicitud->quantity - $solicitud->approved_quantity;
+                        if ($inventory && $remaining > 0) {
+                            $this->consumeInventory($inventory, $remaining);
+                        }
+
+                        $solicitud->approved_quantity = $solicitud->quantity;
+                        $solicitud->status = 'aprobado';
+                        $solicitud->to_gerencia_id = null;
+                        $solicitud->save();
+
+                        $this->createStatusLog(
+                            $solicitud,
+                            'inventory_finalized',
+                            'aprobado',
+                            $data['justification'],
+                            $attachmentPath
+                        );
+                        break;
                     }
 
                     $solicitud->status = $nextStage;
@@ -245,7 +297,11 @@ class RequestController extends Controller
                     break;
 
                 case 'reject_stage':
-                    $allowedStages = ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'normalizacion_final'];
+                    $isInventoryRequest = $this->isInventoryRequest($solicitud);
+                    $allowedStages = $isInventoryRequest
+                        ? ['pendiente', 'vp_mantenimiento']
+                        : ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'normalizacion_final'];
+
                     if (!in_array($solicitud->status, $allowedStages, true)) {
                         throw ValidationException::withMessages([
                             'action' => 'La acción seleccionada no es válida para el estatus actual.',
@@ -267,7 +323,7 @@ class RequestController extends Controller
                         $solicitud->status = 'compras';
                         $solicitud->to_gerencia_id = $this->getGerenciaIdForStage('compras');
                     } else {
-                        $previousStage = $this->getPreviousStage($solicitud->status) ?? 'pendiente';
+                        $previousStage = $this->getPreviousStage($solicitud, $solicitud->status) ?? 'pendiente';
                         $solicitud->status = $previousStage;
                         $solicitud->to_gerencia_id = $this->getGerenciaIdForStage($previousStage);
                     }
@@ -402,9 +458,51 @@ class RequestController extends Controller
 
     public function generatePDF($id)
     {
-        $solicitud = Solicitud::with(['product', 'fromGerencia', 'toGerencia', 'statusLogs.user'])->findOrFail($id);
-        $pdf = Pdf::loadView('solicitudes.pdf', compact('solicitud'));
-        return $pdf->stream("minuta_{$solicitud->code}.pdf");
+        $solicitud = Solicitud::with([
+            'product',
+            'fromGerencia',
+            'toGerencia',
+            'creator',
+            'statusLogs.user.gerencia',
+        ])->findOrFail($id);
+        $isApproved = $solicitud->status === 'aprobado';
+        $view = $isApproved ? 'solicitudes.orden_entrega_pdf' : 'solicitudes.pdf';
+        $filename = $isApproved
+            ? "nota_entrega_{$solicitud->code}.pdf"
+            : "minuta_{$solicitud->code}.pdf";
+
+        $pdf = Pdf::loadView($view, compact('solicitud'));
+        return $pdf->stream($filename);
+    }
+
+    public function viewAttachment(Request $request, Solicitud $solicitud, SolicitudStatusLog $log)
+    {
+        if ($log->solicitud_id !== $solicitud->id) {
+            abort(404);
+        }
+
+        $user = $request->user();
+        $isAdmin = $user && $user->hasAnyRole(['super_admin', 'admin']);
+
+        if (!$isAdmin) {
+            $allowed = $user && (
+                $solicitud->created_by === $user->id
+                || ($user->gerencia_id && (
+                    $solicitud->from_gerencia_id === $user->gerencia_id
+                    || $solicitud->to_gerencia_id === $user->gerencia_id
+                ))
+            );
+
+            if (!$allowed) {
+                abort(403);
+            }
+        }
+
+        if (!$log->attachment_path || !Storage::disk('public')->exists($log->attachment_path)) {
+            abort(404);
+        }
+
+        return response()->file(Storage::disk('public')->path($log->attachment_path));
     }
 
     protected function resolveWorkflowRole($user): string
@@ -440,24 +538,38 @@ class RequestController extends Controller
         return $cache[$name];
     }
 
-    protected function getNextStage(string $currentStage): ?string
+    protected function isInventoryRequest(Solicitud $solicitud): bool
     {
-        $index = array_search($currentStage, $this->workflowOrder, true);
+        return !is_null($solicitud->inventory_id);
+    }
+
+    protected function stageSequenceFor(Solicitud $solicitud): array
+    {
+        return $this->isInventoryRequest($solicitud)
+            ? ['pendiente', 'vp_mantenimiento']
+            : ['pendiente', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'compras', 'normalizacion_final'];
+    }
+
+    protected function getNextStage(Solicitud $solicitud, string $currentStage): ?string
+    {
+        $sequence = $this->stageSequenceFor($solicitud);
+        $index = array_search($currentStage, $sequence, true);
         if ($index === false) {
             return null;
         }
 
-        return $this->workflowOrder[$index + 1] ?? null;
+        return $sequence[$index + 1] ?? null;
     }
 
-    protected function getPreviousStage(string $currentStage): ?string
+    protected function getPreviousStage(Solicitud $solicitud, string $currentStage): ?string
     {
-        $index = array_search($currentStage, $this->workflowOrder, true);
+        $sequence = $this->stageSequenceFor($solicitud);
+        $index = array_search($currentStage, $sequence, true);
         if ($index === false || $index === 0) {
             return null;
         }
 
-        return $this->workflowOrder[$index - 1] ?? null;
+        return $sequence[$index - 1];
     }
 
     protected function getGerenciaIdForStage(string $stage): ?int

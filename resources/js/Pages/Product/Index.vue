@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Modal from '@/Components/Modal.vue';
 import { ref, onMounted, computed } from 'vue';
-import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilIcon, TrashIcon, DocumentArrowDownIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   products: Object,
@@ -91,18 +91,15 @@ const tipoMaterialLabels = computed(() => {
 
 const formatTipoMaterial = (value) => tipoMaterialLabels.value[value] ?? 'Sin clasificación';
 
-const formatUbicaciones = (values) => {
-  if (Array.isArray(values) && values.length > 0) {
-    return values.join(', ');
-  }
-
-  return 'Sin ubicación asignada';
-};
-
 const resetTipoMaterialFilter = () => {
   selectedTipoMaterial.value = [];
   applyFilters();
 };
+
+function exportProduct(product) {
+  if (!product) return;
+  window.open(route('product.pdf', product.id), '_blank');
+}
 </script>
 
 <template>
@@ -131,33 +128,59 @@ const resetTipoMaterialFilter = () => {
       </div>
     </Modal>
 
-    <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+    <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
       {{ successMessage }}
     </div>
+    <div v-if="$page.props.errors?.product" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
+      {{ $page.props.errors.product }}
+    </div>
 
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-      <h1 class="text-2xl font-bold">Gestión de Productos</h1>
-      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <form @submit.prevent="applyFilters" class="flex items-center gap-2">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
+      <h1 class="text-2xl font-bold text-brand-charcoal">Gestión de Productos</h1>
+      <div class="flex flex-wrap gap-2">
+        <Link
+          :href="route('reportes.productos')"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-brand-gray text-brand-charcoal rounded-md shadow-sm hover:bg-gray-200 transition"
+          title="Ver reportes"
+        >
+          Reportes
+        </Link>
+        <Link
+          v-if="canManage"
+          :href="route('product.create')"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-brand-red text-white rounded-md shadow-sm hover:bg-brand-wine transition flex-shrink-0"
+          title="Nuevo Producto"
+        >
+          Nuevo Producto
+        </Link>
+      </div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl shadow border border-gray-200 mb-6">
+      <form @submit.prevent="applyFilters" class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
           <input
             v-model="search"
             type="text"
             placeholder="Buscar por código o nombre"
-            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none w-64"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:outline-none w-full md:w-64"
           />
-          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-            Buscar
-          </button>
-          <button
-            type="button"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-            @click="resetFilters"
+          <div class="flex items-center gap-2">
+            <button type="submit" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition">
+              Buscar
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
+              @click="resetFilters"
             >
-            Limpiar
-          </button>
-        </form>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium text-gray-700">Tipo de Material:</span>
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 md:justify-end">
+          <span class="text-sm font-medium text-gray-700">Filtrar por:</span>
           <button
             v-for="option in props.tipoMaterialOptions"
             :key="option.value"
@@ -166,8 +189,8 @@ const resetTipoMaterialFilter = () => {
             :class="[
               'px-3 py-1.5 rounded-full border transition text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-1',
               selectedTipoMaterial.includes(option.value)
-                ? 'bg-blue-600 text-white border-blue-600 shadow focus:ring-blue-400'
-                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50 focus:ring-gray-300'
+                ? 'bg-brand-red text-white border-brand-red shadow focus:ring-brand-red/60'
+                : 'bg-white text-gray-600 border-gray-300 hover:bg-brand-gray focus:ring-gray-300'
             ]"
           >
             {{ option.label }}
@@ -175,40 +198,31 @@ const resetTipoMaterialFilter = () => {
           <button
             v-if="selectedTipoMaterial.length"
             type="button"
-            class="text-xs text-blue-600 hover:text-blue-700 underline"
+            class="text-xs text-brand-red hover:text-brand-wine underline"
             @click="resetTipoMaterialFilter"
           >
             Limpiar
           </button>
         </div>
-        <Link
-          v-if="canManage"
-          :href="route('product.create')"
-          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 transition flex-shrink-0"
-          title="Nuevo Producto"
-        >
-          Nuevo
-        </Link>
-      </div>
+      </form>
     </div>
 
     <div
       v-if="products.data.length === 0"
-      class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4"
+      class="bg-brand-gray border-l-4 border-brand-red text-brand-charcoal p-4 mb-4"
     >
       No se encontraron productos.
     </div>
 
     <div v-else class="bg-white shadow rounded-lg border border-gray-200 overflow-hidden">
       <table class="w-full">
-        <thead class="bg-gray-100 border-b border-gray-300">
+        <thead class="bg-brand-gray border-b border-gray-300">
           <tr>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Imagen</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Código</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Nombre</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Sub-Área</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-left">Tipo de Material</th>
-            <th class="py-3 px-4 font-semibold text-gray-700 text-left">Ubicación</th>
             <th class="py-3 px-4 font-semibold text-gray-700 text-center">Acciones</th>
           </tr>
         </thead>
@@ -231,27 +245,34 @@ const resetTipoMaterialFilter = () => {
             <td class="py-3 px-4 align-middle break-words">{{ product.name }}</td>
             <td class="py-3 px-4 align-middle break-words">{{ product.sub_area || 'Sin sub-área' }}</td>
             <td class="py-3 px-4 align-middle break-words">{{ formatTipoMaterial(product.tipo_material) }}</td>
-            <td class="py-3 px-4 align-middle break-words">{{ formatUbicaciones(product.ubicaciones) }}</td>
             <td class="py-3 px-4 align-middle">
               <div class="flex justify-center items-center gap-3">
                 <Link
                   :href="route('product.show', product.id)"
-                  class="inline-flex items-center justify-center bg-blue-600 text-white w-10 h-10 rounded-full hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  class="inline-flex items-center justify-center bg-brand-red text-white w-10 h-10 rounded-full hover:bg-brand-wine transition-all duration-200 shadow-md hover:shadow-lg"
                   title="Ver detalle"
                 >
                   <EyeIcon class="w-4 h-4" />
                 </Link>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center bg-brand-gray text-brand-charcoal w-10 h-10 rounded-full hover:bg-gray-200 transition-all duration-200 shadow-md hover:shadow-lg"
+                  title="Exportar ficha PDF"
+                  @click="exportProduct(product)"
+                >
+                  <DocumentArrowDownIcon class="w-4 h-4" />
+                </button>
                 <template v-if="canManage">
                   <Link
                     :href="route('product.edit', product.id)"
-                    class="inline-flex items-center justify-center bg-gray-700 text-white w-10 h-10 rounded-full hover:bg-gray-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    class="inline-flex items-center justify-center bg-brand-gray text-brand-charcoal w-10 h-10 rounded-full hover:bg-gray-200 transition-all duration-200 shadow-md hover:shadow-lg"
                     title="Editar"
                   >
                     <PencilIcon class="w-4 h-4" />
                   </Link>
                   <button
                     @click.prevent="confirmDelete(product.id)"
-                    class="inline-flex items-center justify-center bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
+                    class="inline-flex items-center justify-center bg-brand-wine text-white w-10 h-10 rounded-full hover:bg-brand-red transition-all duration-200 shadow-md hover:shadow-lg"
                     title="Eliminar"
                   >
                     <TrashIcon class="w-4 h-4" />

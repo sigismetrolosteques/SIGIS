@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Inventory;
 use App\Models\Product;
+use App\Models\Solicitud;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
@@ -14,6 +15,10 @@ class InventoryController extends Controller
         ['value' => 'equipos', 'label' => 'Equipos'],
         ['value' => 'herramientas', 'label' => 'Herramientas'],
         ['value' => 'consumibles', 'label' => 'Consumibles'],
+    ];
+
+    protected array $ubicacionOptions = [
+        'Almacén de mantenimiento Piso 3 CECAP',
     ];
 
     public function index(Request $request)
@@ -62,6 +67,7 @@ class InventoryController extends Controller
         return Inertia::render('Inventory/Create', [
             'products' => Product::all(),
             'tipoMaterialOptions' => $this->tipoMaterialOptions,
+            'ubicacionOptions' => $this->ubicacionOptions,
         ]);
     }
 
@@ -73,13 +79,15 @@ class InventoryController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0',
             'location' => 'nullable|string|max:255',
+            'ubicaciones' => 'nullable|array',
+            'ubicaciones.*' => 'string',
             'notes' => 'nullable|string',
         ]);
 
         Inventory::create([
             'product_id' => $validated['product_id'],
             'quantity' => $validated['quantity'],
-            'location' => $validated['location'] ?? null,
+            'location' => $this->resolveLocation($request) ?? ($validated['location'] ?? null),
             'notes' => $validated['notes'] ?? null,
             'reserved_quantity' => 0,
         ]);
@@ -95,6 +103,7 @@ class InventoryController extends Controller
             'inventory' => $inventory,
             'products' => Product::all(),
             'tipoMaterialOptions' => $this->tipoMaterialOptions,
+            'ubicacionOptions' => $this->ubicacionOptions,
         ]);
     }
 
@@ -106,13 +115,15 @@ class InventoryController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0',
             'location' => 'nullable|string|max:255',
+            'ubicaciones' => 'nullable|array',
+            'ubicaciones.*' => 'string',
             'notes' => 'nullable|string',
         ]);
 
         $inventory->update([
             'product_id' => $validated['product_id'],
             'quantity' => $validated['quantity'],
-            'location' => $validated['location'] ?? null,
+            'location' => $this->resolveLocation($request) ?? ($validated['location'] ?? null),
             'notes' => $validated['notes'] ?? null,
         ]);
 
@@ -133,6 +144,13 @@ class InventoryController extends Controller
     {
         $this->authorizeManagement();
 
+        $hasRequests = Solicitud::where('inventory_id', $inventory->id)->exists();
+        if ($hasRequests) {
+            return back()->withErrors([
+                'inventory' => 'No es posible eliminar el registro porque tiene solicitudes asociadas.',
+            ]);
+        }
+
         $inventory->delete();
 
         return redirect()->route('inventory.index')->with('success', 'Registro eliminado');
@@ -143,5 +161,27 @@ class InventoryController extends Controller
         if (!auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
             abort(403, 'No tienes permiso para gestionar inventario');
         }
+    }
+
+    protected function resolveLocation(Request $request): ?string
+    {
+        $selected = $this->filterUbicaciones($request->input('ubicaciones', []));
+        if (!empty($selected)) {
+            return implode(', ', $selected);
+        }
+
+        $location = $request->input('location');
+        return $location !== null && trim($location) !== '' ? trim($location) : null;
+    }
+
+    protected function filterUbicaciones($ubicaciones): array
+    {
+        if (!is_array($ubicaciones)) {
+            return [];
+        }
+
+        $filtered = array_intersect($ubicaciones, $this->ubicacionOptions);
+
+        return array_values(array_unique($filtered));
     }
 }

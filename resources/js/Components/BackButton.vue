@@ -10,10 +10,19 @@ const props = defineProps({
   label: {
     type: String,
     default: 'Regresar'
+  },
+  forceFallback: {
+    type: Boolean,
+    default: false
   }
 });
 
 const handleBack = () => {
+  if (props.forceFallback) {
+    router.visit(props.fallbackRoute);
+    return;
+  }
+
   if (window.history.length > 1) {
     window.history.back();
     return;
@@ -27,9 +36,9 @@ const handleBack = () => {
   <button
     type="button"
     @click="handleBack"
-    class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full shadow-sm hover:bg-gray-100 transition-colors"
+    class="inline-flex items-center gap-1 text-sm font-semibold text-brand-red hover:text-brand-wine transition-colors underline underline-offset-2"
   >
-    <ArrowLeftIcon class="w-5 h-5" />
+    <ArrowLeftIcon class="w-4 h-4" />
     <span>{{ label }}</span>
   </button>
 </template>

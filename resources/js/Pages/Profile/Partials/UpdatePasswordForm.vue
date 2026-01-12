@@ -107,13 +107,13 @@ const updatePassword = () => {
                             class="h-1 flex-1 rounded"
                             :class="{
                                 'bg-red-500': passwordStrength.score < i,
-                                'bg-green-500': passwordStrength.score >= i
+                                'bg-brand-red': passwordStrength.score >= i
                             }"
                         ></div>
                     </div>
                     
                     <p class="text-xs text-gray-600">
-                        <span v-if="passwordStrength.isValid" class="text-green-600">✔ Contraseña segura</span>
+                        <span v-if="passwordStrength.isValid" class="text-brand-red">✔ Contraseña segura</span>
                         <span v-else>
                             Requisitos: 
                             <span 

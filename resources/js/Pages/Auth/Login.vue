@@ -74,7 +74,7 @@ const submit = () => {
           <p class="text-gray-700">Inicia sesión para continuar</p>
         </div>
 
-      <div v-if="status" class="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
+      <div v-if="status" class="mb-4 p-3 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded-lg text-center">
         {{ status }}
       </div>
       <!--div v-if="Object.keys(form.errors).length > 0" class="p-4 mb-4 bg-red-100 text-red-700 rounded">

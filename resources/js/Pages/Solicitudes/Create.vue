@@ -51,6 +51,7 @@ const selectedProduct = computed(() => {
 
 const requiresReturnDate = computed(() => {
   if (!selectedProduct.value) return false;
+  if (activeTab.value !== 'inventario') return false;
   return ['equipos', 'herramientas'].includes(selectedProduct.value.tipo_material);
 });
 
@@ -186,7 +187,7 @@ function submit() {
     <div class="p-6">
       <h1 class="text-2xl font-bold mb-6">Crear Solicitud</h1>
 
-      <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+      <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
         {{ successMessage }}
       </div>
       <div v-if="generalError" class="mb-4 p-4 bg-red-100 text-red-800 rounded">
@@ -202,7 +203,7 @@ function submit() {
           <button
             type="button"
             class="py-3 border-b-2 px-1 text-sm font-medium"
-            :class="activeTab === 'inventario' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            :class="activeTab === 'inventario' ? 'border-brand-red text-brand-red' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             @click="setTab('inventario')"
           >
             Inventario
@@ -210,7 +211,7 @@ function submit() {
           <button
             type="button"
             class="py-3 border-b-2 px-1 text-sm font-medium"
-            :class="activeTab === 'compra' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            :class="activeTab === 'compra' ? 'border-brand-red text-brand-red' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
             @click="setTab('compra')"
           >
             Compra
@@ -223,7 +224,7 @@ function submit() {
         <div>
           <label class="text-sm font-medium">Producto</label>
           <select v-model="form.product_id"
-                  class="w-full border rounded px-3 py-2"
+                  class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-brand-red"
                   :class="{ 'border-red-500': form.errors.product_id }">
             <option :value="''">-- Selecciona un producto --</option>
             <option v-for="p in displayedProducts" :key="p.id" :value="p.id">{{ p.name }}</option>
@@ -238,7 +239,7 @@ function submit() {
         <div v-if="activeTab === 'inventario'">
           <label class="text-sm font-medium">Inventario (ubicación)</label>
           <select v-model="form.inventory_id"
-                  class="w-full border rounded px-3 py-2"
+                  class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-brand-red"
                   :class="{ 'border-red-500': form.errors.inventory_id }">
             <option :value="null">-- Selecciona inventario --</option>
             <option v-for="inv in inventoriesForProduct" :key="inv.id" :value="inv.id">
@@ -253,7 +254,7 @@ function submit() {
           <label class="text-sm font-medium">Cantidad</label>
           <template v-if="activeTab === 'inventario'">
             <select v-model="form.quantity"
-                    class="w-full border rounded px-3 py-2"
+                    class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-brand-red"
                     :class="{ 'border-red-500': form.errors.quantity }">
               <option :value="''">-- Selecciona cantidad --</option>
               <option v-for="q in quantityOptions" :key="q" :value="q">{{ q }}</option>
@@ -265,7 +266,7 @@ function submit() {
               type="number"
               min="1"
               step="1"
-              class="w-full border rounded px-3 py-2"
+              class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-brand-red"
               :class="{ 'border-red-500': form.errors.quantity }"
               placeholder="Cantidad solicitada"
             />
@@ -279,7 +280,7 @@ function submit() {
           <input
             type="date"
             v-model="form.return_date"
-            class="w-full border rounded px-3 py-2"
+            class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-brand-red"
             :class="{ 'border-red-500': form.errors.return_date }"
           />
           <div v-if="form.errors.return_date" class="text-red-600 mt-1 text-sm">{{ form.errors.return_date }}</div>
@@ -293,8 +294,8 @@ function submit() {
         </div>
 
         <div class="flex justify-end gap-4">
-          <Link :href="route('solicitudes.index')" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-400">Cancelar</Link>
-          <button type="submit" :disabled="form.processing" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <Link :href="route('solicitudes.index')" class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded hover:bg-gray-200">Cancelar</Link>
+          <button type="submit" :disabled="form.processing" class="px-4 py-2 bg-brand-red text-white rounded hover:bg-brand-wine">
             {{ form.processing ? 'Guardando...' : 'Crear Solicitud' }}
           </button>
         </div>

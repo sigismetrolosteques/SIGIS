@@ -100,26 +100,26 @@ function latestJustification(solicitud) {
 }
 
 function statusBadgeClass(status) {
-  const base = 'px-2 py-1 rounded text-xs font-semibold';
+  const base = 'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border';
   switch (status) {
     case 'pendiente':
-      return `${base} bg-yellow-100 text-yellow-800`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'vp_mantenimiento':
-      return `${base} bg-indigo-100 text-indigo-600`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'vp_soporte':
-      return `${base} bg-purple-100 text-purple-600`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'administracion':
-      return `${base} bg-blue-100 text-blue-700`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'compras':
-      return `${base} bg-amber-100 text-amber-700`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'normalizacion_final':
-      return `${base} bg-teal-100 text-teal-700`;
+      return `${base} bg-status-pending-bg text-status-pending-text border-status-pending-brd`;
     case 'aprobado':
-      return `${base} bg-green-100 text-green-800`;
+      return `${base} bg-status-approved-bg text-status-approved-text border-status-approved-brd`;
     case 'rechazado':
-      return `${base} bg-red-100 text-red-800`;
+      return `${base} bg-status-danger-bg text-status-danger-text border-status-danger-brd`;
     default:
-      return `${base} bg-gray-100 text-gray-800`;
+      return `${base} bg-gray-100 text-gray-800 border-gray-200`;
   }
 }
 
@@ -156,7 +156,7 @@ const actionLabels = {
   reject_stage: 'Rechazar etapa',
   compras_approve: 'Aprobación de Compras',
   compras_reject: 'Devolver a Administración',
-  finalize_order: 'Generar Orden de Entrega',
+  finalize_order: 'Generar Nota de Entrega',
 };
 
 function getStatusLabel(status) {
@@ -217,7 +217,13 @@ function submitAction() {
       closeActionModal();
     },
     onError: (errors) => {
-      actionError.value = errors?.approved_quantity || errors?.attachment || errors?.justification || errors?.action || 'No se pudo completar la acción.';
+      actionError.value = errors?.approved_quantity
+        || errors?.attachment
+        || errors?.justification
+        || errors?.action
+        || errors?.inventory
+        || errors?.general
+        || 'No se pudo completar la acción.';
     },
     onFinish: () => {
       actionForm.transform(data => data);
@@ -228,6 +234,13 @@ function submitAction() {
 function openPDF(solicitud) {
   if (!solicitud) return;
   window.open(route('solicitudes.pdf', solicitud.id), '_blank');
+}
+
+function pdfLabel(solicitud) {
+  if (!solicitud) return 'Generar PDF';
+  return solicitud.status === 'aprobado'
+    ? 'Generar Nota de Entrega PDF'
+    : 'Generar Minuta PDF';
 }
 
 function remainingQuantity(solicitud) {
@@ -303,14 +316,19 @@ function timelineLabel(action) {
       return 'Devolución de Compras';
     case 'finalize_order':
       return 'Orden de entrega';
+    case 'inventory_finalized':
+      return 'Inventario aprobado';
     default:
       return action;
   }
 }
 
-function attachmentUrl(path) {
-  if (!path) return null;
-  return `/storage/${path}`;
+function attachmentUrl(log) {
+  if (!log?.id || !detalleSolicitud?.value?.id) return null;
+  return route('solicitudes.attachment', {
+    solicitud: detalleSolicitud.value.id,
+    log: log.id,
+  });
 }
 </script>
 
@@ -340,10 +358,6 @@ function attachmentUrl(path) {
             <div v-if="!isViewer">
               <p class="text-sm text-gray-500">Origen</p>
               <p class="text-gray-800">{{ detalleSolicitud.from_gerencia?.name ?? 'Sin gerencia' }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-500">Destino</p>
-              <p class="text-gray-800">{{ detalleSolicitud.to_gerencia?.name ?? 'Sin gerencia' }}</p>
             </div>
             <div>
               <p class="text-sm text-gray-500">Estado actual</p>
@@ -393,9 +407,9 @@ function attachmentUrl(path) {
                 </p>
                 <div v-if="log.attachment_path" class="mt-2">
                   <a
-                    :href="attachmentUrl(log.attachment_path)"
+                    :href="attachmentUrl(log)"
                     target="_blank"
-                    class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                    class="inline-flex items-center gap-1 text-brand-red hover:text-brand-wine"
                   >
                     <PaperClipIcon class="w-4 h-4" />
                     Ver documento adjunto
@@ -408,10 +422,10 @@ function attachmentUrl(path) {
           <div class="mt-6 flex justify-end">
             <button
               type="button"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition"
               @click="openPDF(detalleSolicitud)"
             >
-              Generar Minuta PDF
+              {{ pdfLabel(detalleSolicitud) }}
             </button>
           </div>
         </div>
@@ -435,7 +449,7 @@ function attachmentUrl(path) {
             <label class="text-sm font-medium text-gray-700">Justificación</label>
             <textarea
               v-model="actionForm.justification"
-              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-red"
               rows="3"
               placeholder="Describe la razón de la acción"
               required
@@ -449,7 +463,7 @@ function attachmentUrl(path) {
               :max="remainingQuantity(actionModal.solicitud)"
               min="1"
               step="1"
-              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-red"
               placeholder="Cantidad a aprobar"
               required
             />
@@ -462,7 +476,7 @@ function attachmentUrl(path) {
             <input
               ref="attachmentInput"
               type="file"
-              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-red"
               accept="application/pdf,image/*"
               @change="handleAttachmentChange"
             />
@@ -471,22 +485,22 @@ function attachmentUrl(path) {
           <div class="flex justify-end gap-3 flex-wrap">
             <button
               type="button"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+              class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition disabled:opacity-50"
               :disabled="!actionModal.solicitud"
               @click="openPDF(actionModal.solicitud)"
             >
-              Generar Minuta PDF
+              {{ pdfLabel(actionModal.solicitud) }}
             </button>
             <button
               type="button"
-              class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
               @click="closeActionModal"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition disabled:opacity-50"
               :disabled="actionForm.processing"
             >
               {{ actionForm.processing ? 'Guardando...' : 'Confirmar' }}
@@ -496,14 +510,25 @@ function attachmentUrl(path) {
       </div>
     </Modal>
 
-    <div v-if="successMessage" class="mb-4 p-4 bg-green-100 text-green-800 rounded">
+    <div v-if="successMessage" class="mb-4 p-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal rounded">
       {{ successMessage }}
     </div>
     <div v-if="errorMessage" class="mb-4 p-4 bg-red-100 text-red-700 rounded">
       {{ errorMessage }}
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
+   
+
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-brand-charcoal">Gestión de Solicitudes</h1>
+      <Link
+        :href="route('solicitudes.create')"
+        class="inline-flex items-center bg-brand-red text-white px-4 py-2 rounded-lg hover:bg-brand-wine transition"
+      >
+        Nueva Solicitud
+      </Link>
+    </div>
+     <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
       <form @submit.prevent="applyFilters" class="grid grid-cols-1 md:grid-cols-6 gap-4">
         <div class="md:col-span-2">
           <label class="text-sm font-medium text-gray-600">Buscar</label>
@@ -511,14 +536,14 @@ function attachmentUrl(path) {
             v-model="filtersForm.search"
             type="text"
             placeholder="Código o producto"
-            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-red focus:outline-none"
           />
         </div>
         <div>
           <label class="text-sm font-medium text-gray-600">Estado</label>
           <select
             v-model="filtersForm.status"
-            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-red focus:outline-none"
           >
             <option value="">Todos</option>
             <option v-for="(label, value) in statusOptions" :key="value" :value="value">
@@ -531,7 +556,7 @@ function attachmentUrl(path) {
           <input
             v-model="filtersForm.from_date"
             type="date"
-            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-red focus:outline-none"
           />
         </div>
         <div>
@@ -539,16 +564,16 @@ function attachmentUrl(path) {
           <input
             v-model="filtersForm.to_date"
             type="date"
-            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-red focus:outline-none"
           />
         </div>
         <div class="flex items-end gap-2">
-          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          <button type="submit" class="px-4 py-2 bg-brand-red text-white rounded-lg hover:bg-brand-wine transition">
             Filtrar
           </button>
           <button
             type="button"
-            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            class="px-4 py-2 bg-brand-gray text-brand-charcoal rounded-lg hover:bg-gray-200 transition"
             @click="resetFilters"
           >
             Limpiar
@@ -556,18 +581,7 @@ function attachmentUrl(path) {
         </div>
       </form>
     </div>
-
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestión de Solicitudes</h1>
-      <Link
-        :href="route('solicitudes.create')"
-        class="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-      >
-        Nueva Solicitud
-      </Link>
-    </div>
-
-    <div v-if="!solicitudes.data || solicitudes.data.length === 0" class="bg-yellow-100 p-4 rounded border border-yellow-200">
+    <div v-if="!solicitudes.data || solicitudes.data.length === 0" class="bg-brand-gray border-l-4 border-brand-red text-brand-charcoal p-4 mb-4">
       No hay solicitudes registradas.
     </div>
 
@@ -577,7 +591,7 @@ function attachmentUrl(path) {
     >
       <div class="relative max-h-[60vh] overflow-auto">
         <table class="min-w-[960px] divide-y divide-gray-200 text-sm text-gray-700">
-          <thead class="bg-gray-100 text-gray-700 sticky top-0 z-10">
+          <thead class="bg-brand-gray text-gray-700 sticky top-0 z-10">
             <tr>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-48">
                 Acciones
@@ -603,9 +617,6 @@ function attachmentUrl(path) {
               >
                 Origen
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                Destino
-              </th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 w-32">
                 Estado
               </th>
@@ -619,12 +630,12 @@ function attachmentUrl(path) {
             <tr
               v-for="solicitud in solicitudes.data"
               :key="solicitud.id"
-              class="hover:bg-gray-50 transition"
+              class="hover:bg-brand-gray transition"
             >
               <td class="px-4 py-3 align-top">
                 <div class="flex flex-nowrap items-center gap-2 overflow-x-auto pb-1">
                   <button
-                    :class="[baseActionClass, 'bg-blue-100 text-blue-600 hover:bg-blue-200']"
+                    :class="[baseActionClass, 'bg-brand-gray text-brand-charcoal hover:bg-gray-200']"
                     @click="openDetalle(solicitud)"
                     title="Ver detalle"
                   >
@@ -632,7 +643,7 @@ function attachmentUrl(path) {
                   </button>
                   <template v-if="canApproveStage(solicitud)">
                     <button
-                      :class="[baseActionClass, 'bg-green-100 text-green-600 hover:bg-green-200']"
+                      :class="[baseActionClass, 'bg-brand-tint text-brand-red hover:bg-brand-red/20']"
                       @click="openActionModal(solicitud, 'approve_stage')"
                       title="Aprobar etapa"
                     >
@@ -642,7 +653,7 @@ function attachmentUrl(path) {
 
                   <template v-if="canRejectStage(solicitud)">
                     <button
-                      :class="[baseActionClass, 'bg-red-100 text-red-600 hover:bg-red-200']"
+                      :class="[baseActionClass, 'bg-brand-tint text-brand-wine hover:bg-brand-wine/20']"
                       @click="openActionModal(solicitud, 'reject_stage')"
                       title="Rechazar etapa"
                     >
@@ -652,7 +663,7 @@ function attachmentUrl(path) {
 
                   <template v-if="canComprasApprove(solicitud)">
                     <button
-                      :class="[baseActionClass, 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200']"
+                      :class="[baseActionClass, 'bg-brand-tint text-brand-red hover:bg-brand-red/20']"
                       @click="openActionModal(solicitud, 'compras_approve')"
                       title="Aprobación de Compras"
                     >
@@ -662,7 +673,7 @@ function attachmentUrl(path) {
 
                   <template v-if="canComprasReject(solicitud)">
                     <button
-                      :class="[baseActionClass, 'bg-rose-100 text-rose-600 hover:bg-rose-200']"
+                      :class="[baseActionClass, 'bg-brand-tint text-brand-wine hover:bg-brand-wine/20']"
                       @click="openActionModal(solicitud, 'compras_reject')"
                       title="Devolver a Administración"
                     >
@@ -672,7 +683,7 @@ function attachmentUrl(path) {
 
                   <template v-if="canFinalizeOrder(solicitud)">
                     <button
-                      :class="[baseActionClass, 'bg-sky-100 text-sky-600 hover:bg-sky-200']"
+                      :class="[baseActionClass, 'bg-brand-tint text-brand-red hover:bg-brand-red/20']"
                       @click="openActionModal(solicitud, 'finalize_order')"
                       title="Generar orden de entrega"
                     >
@@ -705,11 +716,6 @@ function attachmentUrl(path) {
               >
                 <span class="block max-w-[12rem] break-words">
                   {{ solicitud.from_gerencia?.name ?? 'Sin gerencia' }}
-                </span>
-              </td>
-              <td class="px-4 py-3 align-top text-sm text-gray-700">
-                <span class="block max-w-[12rem] break-words">
-                  {{ solicitud.to_gerencia?.name ?? 'Sin gerencia' }}
                 </span>
               </td>
               <td class="px-4 py-3 align-top text-sm text-gray-700 whitespace-nowrap">

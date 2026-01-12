@@ -95,7 +95,7 @@ const clearError = (field) => {
         <div class="p-6">
           <div class="flex items-center justify-between mb-8">
             <h1 class="text-2xl font-bold text-gray-800 flex items-center">
-              <i class="fas fa-user-edit mr-2 text-blue-500"></i>
+              <i class="fas fa-user-edit mr-2 text-brand-red"></i>
               Editar Usuario
             </h1>
             
@@ -111,10 +111,10 @@ const clearError = (field) => {
           </div>
           
           <!-- Mensajes de éxito -->
-          <div v-if="successMessage" class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+          <div v-if="successMessage" class="mb-6 bg-brand-gray border border-brand-red/30 text-brand-charcoal px-4 py-3 rounded-lg flex items-center">
             <i class="fas fa-check-circle mr-2 text-lg"></i>
             <span>{{ successMessage }}</span>
-            <button @click="successMessage = ''" class="ml-auto text-green-800 hover:text-green-900">
+            <button @click="successMessage = ''" class="ml-auto text-brand-charcoal hover:text-brand-wine">
               <i class="fas fa-times"></i>
             </button>
           </div>
@@ -139,7 +139,7 @@ const clearError = (field) => {
                     v-model="form.name" 
                     @input="clearError('name')"
                     :class="{'border-red-500': form.errors.name}"
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                     placeholder="Ej: Juan Pérez"
                   >
                   <div v-if="form.errors.name" class="mt-1 text-sm text-red-600 flex items-center">
@@ -155,7 +155,7 @@ const clearError = (field) => {
                     type="email" 
                     @input="clearError('email')"
                     :class="{'border-red-500': form.errors.email}"
-                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                     placeholder="usuario@ejemplo.com"
                   >
                   <div v-if="form.errors.email" class="mt-1 text-sm text-red-600 flex items-center">
@@ -171,7 +171,7 @@ const clearError = (field) => {
                   v-model="form.role" 
                   @change="clearError('role')"
                   :class="{'border-red-500': form.errors.role}"
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                 >
                   <option v-for="role in roles" :key="role.id" :value="role.id">
                     {{ role.name }}
@@ -197,7 +197,7 @@ const clearError = (field) => {
                         type="password"
                         @input="clearError('password')"
                         :class="{'border-red-500': form.errors.password}"
-                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                         placeholder="Nueva contraseña"
                       >
                     </div>
@@ -213,7 +213,7 @@ const clearError = (field) => {
                         v-model="form.password_confirmation" 
                         type="password"
                         :class="{'border-red-500': form.errors.password_confirmation}"
-                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                         placeholder="Repite la contraseña"
                       >
                     </div>
@@ -246,7 +246,7 @@ const clearError = (field) => {
                       v-model="form.security_question_1" 
                       @input="clearError('security_question_1')"
                       :class="{'border-red-500': form.errors.security_question_1}"
-                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition mb-2"
+                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition mb-2"
                       placeholder="Ej: ¿Cuál es el nombre de tu mascota?"
                     >
                     <div class="relative">
@@ -255,7 +255,7 @@ const clearError = (field) => {
                         :type="showAnswers ? 'text' : 'password'"
                         @input="clearError('security_answer_1')"
                         :class="{'border-red-500': form.errors.security_answer_1}"
-                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                         placeholder="Respuesta"
                         @focus="handleAnswerFocus('security_answer_1')"
                         @blur="handleAnswerBlur('security_answer_1')"
@@ -279,7 +279,7 @@ const clearError = (field) => {
                       v-model="form.security_question_2" 
                       @input="clearError('security_question_2')"
                       :class="{'border-red-500': form.errors.security_question_2}"
-                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition mb-2"
+                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition mb-2"
                       placeholder="Ej: ¿Cuál es tu libro favorito?"
                     >
                     <div class="relative">
@@ -288,7 +288,7 @@ const clearError = (field) => {
                         :type="showAnswers ? 'text' : 'password'"
                         @input="clearError('security_answer_2')"
                         :class="{'border-red-500': form.errors.security_answer_2}"
-                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                         placeholder="Respuesta"
                         @focus="handleAnswerFocus('security_answer_2')"
                         @blur="handleAnswerBlur('security_answer_2')"
@@ -312,7 +312,7 @@ const clearError = (field) => {
                       v-model="form.security_question_3" 
                       @input="clearError('security_question_3')"
                       :class="{'border-red-500': form.errors.security_question_3}"
-                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition mb-2"
+                      class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition mb-2"
                       placeholder="Ej: ¿En qué ciudad naciste?"
                     >
                     <div class="relative">
@@ -321,7 +321,7 @@ const clearError = (field) => {
                         :type="showAnswers ? 'text' : 'password'"
                         @input="clearError('security_answer_3')"
                         :class="{'border-red-500': form.errors.security_answer_3}"
-                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        class="w-[49%] px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-transparent transition"
                         placeholder="Respuesta"
                         @focus="handleAnswerFocus('security_answer_3')"
                         @blur="handleAnswerBlur('security_answer_3')"
@@ -347,7 +347,7 @@ const clearError = (field) => {
               <div class="flex space-x-3">
                 <button 
                   type="submit" 
-                  class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center disabled:opacity-75 disabled:cursor-not-allowed"
+                  class="px-5 py-2.5 bg-brand-red hover:bg-brand-wine text-white font-medium rounded-lg transition flex items-center disabled:opacity-75 disabled:cursor-not-allowed"
                   :disabled="form.processing"
                 >
                   <i v-if="form.processing" class="fas fa-spinner fa-spin mr-2"></i>

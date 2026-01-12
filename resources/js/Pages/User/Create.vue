@@ -103,12 +103,12 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
 
     <div class="p-6">
       <h1 class="text-2xl font-bold text-gray-800 mb-6">
-        <i class="fas fa-user-plus mr-2 text-green-500"></i> Crear Usuario
+        <i class="fas fa-user-plus mr-2 text-brand-red"></i> Crear Usuario
       </h1>
 
       <!-- Mensajes -->
       <div v-if="successMessage"
-        class="mb-4 bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded-lg flex items-center">
+        class="mb-4 bg-brand-gray border border-brand-red/40 text-brand-charcoal px-4 py-3 rounded-lg flex items-center">
         <i class="fas fa-check-circle mr-2"></i> {{ successMessage }}
       </div>
 
@@ -125,7 +125,7 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
             <div>
               <label class="text-sm font-medium text-gray-700">Nombre</label>
               <input v-model="form.name" @input="clearError('name')" :class="{ 'border-red-500': form.errors.name }"
-                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition"
+                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-brand-red transition"
                 placeholder="Ej: Juan Pérez" />
               <div v-if="form.errors.name" class="mt-1 text-sm text-red-600">
                 <i class="fas fa-exclamation-circle mr-1"></i> {{ form.errors.name }}
@@ -136,7 +136,7 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
               <label class="text-sm font-medium text-gray-700">Email</label>
               <input v-model="form.email" @input="clearError('email')" type="email"
                 :class="{ 'border-red-500': form.errors.email }"
-                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition"
+                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-brand-red transition"
                 placeholder="usuario@correo.com" />
               <div v-if="form.errors.email" class="mt-1 text-sm text-red-600">
                 <i class="fas fa-exclamation-circle mr-1"></i> {{ form.errors.email }}
@@ -147,7 +147,7 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
               <label class="text-sm font-medium text-gray-700">Cédula</label>
               <input v-model="form.cedula" @input="clearError('cedula')"
                 :class="{ 'border-red-500': form.errors.cedula }"
-                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition"
+                class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-brand-red transition"
                 placeholder="V-12345678 o E-987654321" />
               <div v-if="form.errors.cedula" class="mt-1 text-sm text-red-600">
                 <i class="fas fa-exclamation-circle mr-1"></i> {{ form.errors.cedula }}
@@ -158,7 +158,7 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
           <div>
             <label class="text-sm font-medium text-gray-700">Coordinación</label>
             <select v-model="form.gerencia_id" :class="{ 'border-red-500': form.errors.gerencia_id }"
-              class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition">
+              class="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-brand-red transition">
               <option value="">Seleccione una Coordinación</option>
               <option v-for="g in props.gerencias" :key="g.id" :value="g.id">
                 {{ g.name }}
@@ -169,8 +169,8 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
             </div>
           </div>
           <!-- Nota sobre la contraseña temporal -->
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-blue-800">
+          <div class="bg-brand-gray border border-brand-red/30 rounded-lg p-4">
+            <p class="text-brand-charcoal">
               <i class="fas fa-info-circle mr-2"></i>
               El sistema asignará automáticamente una contraseña temporal se enviara por correo al nuevo usuario.
             </p>
@@ -179,13 +179,13 @@ watch(() => form.gerencia_id, () => clearError('gerencia_id'));
           <!-- Botones de acción -->
           <div class="flex justify-end mt-8 space-x-4">
             <Link :href="route('user.index')"
-              class="px-4 py-2.5 border border-gray-300 rounded-lg text-white bg-gray-500 hover:bg-gray-400 transition flex items-center">
+              class="px-4 py-2.5 border border-gray-300 rounded-lg text-brand-charcoal bg-brand-gray hover:bg-gray-200 transition flex items-center">
             <i class="fas fa-times-circle mr-2"></i>
             Cancelar
             </Link>
 
             <button type="submit"
-              class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition flex items-center"
+              class="px-5 py-2.5 bg-brand-red hover:bg-brand-wine text-white font-medium rounded-lg transition flex items-center"
               :disabled="form.processing">
               <i v-if="form.processing" class="fas fa-spinner fa-spin mr-2"></i>
               <i v-else class="fas fa-save mr-2"></i>
