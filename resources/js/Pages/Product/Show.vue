@@ -116,12 +116,12 @@ function exportPdf() {
           </div>
         </div>
 
-        <div class="flex justify-center items-center bg-gray-50 rounded-lg p-4 min-h-[200px]">
+        <div class="flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden h-72 shadow">
           <img
             v-if="product.image"
             :src="`/img/${product.image}`"
             alt="Imagen del producto"
-            class="max-h-72 rounded-lg shadow"
+            class="h-full w-full object-cover"
           />
           <div v-else class="text-gray-500 italic">Sin imagen disponible</div>
         </div>

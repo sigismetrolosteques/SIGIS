@@ -103,12 +103,12 @@ const formattedCreatedAt = computed(() => {
           </div>
         </div>
 
-        <div class="flex items-center justify-center bg-gray-50 rounded-lg p-4 min-h-[220px]">
+        <div class="flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden h-72 shadow">
           <img
             v-if="inventory.product?.image"
             :src="`/img/${inventory.product.image}`"
             alt="Producto"
-            class="max-h-72 rounded-lg shadow"
+            class="h-full w-full object-cover"
           />
           <div v-else class="text-gray-500 italic">Sin imagen disponible</div>
         </div>

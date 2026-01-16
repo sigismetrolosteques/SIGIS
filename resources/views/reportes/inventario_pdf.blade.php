@@ -12,6 +12,15 @@
             padding: 18px;
             padding-bottom: 110px;
         }
+        .pdf-header {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .pdf-header img {
+            width: 100%;
+            max-height: 110px;
+            object-fit: contain;
+        }
         h1 {
             text-align: center;
             color: #D62828;
@@ -61,6 +70,10 @@
     </style>
 </head>
 <body>
+    <div class="pdf-header">
+        <img src="{{ public_path('img/CINTILLO.png') }}" alt="Ministerio del Poder Popular para el Transporte">
+    </div>
+
     <h1>Reporte de Inventario</h1>
 
     <div class="meta">

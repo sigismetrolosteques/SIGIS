@@ -26,17 +26,42 @@ const logout = () => {
   );
 };
 
+const normalizeRoleName = (roleName) => {
+  if (!roleName) return '';
+  return String(roleName).trim().toLowerCase().replace(/\s+/g, '_');
+};
+
 const userRoles = computed(() => {
   const roles = authUser.value?.roles ?? [];
   return roles
     .map(role => (typeof role === 'string' ? role : role?.name))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(normalizeRoleName);
 });
 
 const hasRole = role => userRoles.value.includes(role);
 const isSuperAdmin = computed(() => hasRole('super_admin'));
 const isAdmin = computed(() => hasRole('admin'));
 const isViewer = computed(() => !isSuperAdmin.value && !isAdmin.value && hasRole('viewer'));
+const workflowRole = computed(() => {
+  if (isSuperAdmin.value) return 'super_admin';
+  if (!isAdmin.value) return 'viewer';
+  const gerenciaName = authUser.value?.gerencia?.name;
+  switch (gerenciaName) {
+    case 'Normalización':
+      return 'normalizacion';
+    case 'VP. Mantenimiento':
+      return 'vp_mantenimiento';
+    case 'VP. Soporte':
+      return 'vp_soporte';
+    case 'Administración':
+      return 'administracion';
+    case 'Compras':
+      return 'compras';
+    default:
+      return 'viewer';
+  }
+});
 
 const displayUserName = computed(() => authUser.value?.name ?? 'Usuario');
 const alertsState = ref(page.props.alerts ?? {});
@@ -51,6 +76,11 @@ watch(
 );
 const alerts = computed(() => alertsState.value ?? {});
 const alertsTotal = computed(() => Number(alerts.value.total) || 0);
+const canSeeAlerts = computed(() => {
+  if (isSuperAdmin.value) return true;
+  if (typeof alerts.value.canApprove === 'boolean') return alerts.value.canApprove;
+  return workflowRole.value !== 'viewer';
+});
 const alertsLatestAt = computed(() => {
   const value = alerts.value.latestAt;
   if (!value) return null;
@@ -76,6 +106,7 @@ if (typeof window !== 'undefined') {
   alertsSeenTotal.value = storedSeenTotal ?? 0;
 }
 const hasUnseenAlerts = computed(() => {
+  if (!canSeeAlerts.value) return false;
   if (typeof alerts.value.unseen === 'boolean') return alerts.value.unseen;
   if (alertsTotal.value <= 0) return false;
   if (!alertsLatestAt.value) return alertsTotal.value > alertsSeenTotal.value;
@@ -89,8 +120,6 @@ const isAlertsPage = computed(() => {
   if (typeof window === 'undefined') return false;
   return window.location.pathname.startsWith('/alertas');
 });
-const showAlertBanner = computed(() => hasUnseenAlerts.value && !isAlertsPage.value);
-const alertBannerTitle = computed(() => hasUnseenAlerts.value ? 'Nueva alerta' : 'Alertas activas');
 const alertToastVisible = ref(false);
 let alertsRefreshTimer = null;
 let alertToastTimer = null;
@@ -105,12 +134,8 @@ if (typeof window !== 'undefined') {
 }
 
 const alertToastDetails = computed(() => {
-  const lowStock = Number(alerts.value.lowStock) || 0;
-  const overdue = Number(alerts.value.overdueReturns) || 0;
-  const parts = [];
-  if (lowStock > 0) parts.push(`${lowStock} stock bajo`);
-  if (overdue > 0) parts.push(`${overdue} devoluciones vencidas`);
-  return parts.join(' · ');
+  if (alertsTotal.value <= 0) return '';
+  return 'Revisa la bandeja de aprobaciones.';
 });
 
 const triggerAlertToast = () => {
@@ -179,6 +204,7 @@ const markAlertsSeenWithPayload = (payload) => {
 };
 
 const fetchAlerts = async (options = {}) => {
+  if (!canSeeAlerts.value) return;
   try {
     const response = await fetch('/alertas/resumen', {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -210,7 +236,6 @@ const menuItems = computed(() => [
   { href: '/inventory', label: 'Gestión de Inventario', roles: ['super_admin', 'admin', 'viewer'], icon: 'archive' },
   { href: '/solicitudes', label: 'Gestión de Solicitudes', roles: ['super_admin', 'admin', 'viewer'], icon: 'inbox' },
   { href: '/reportes/solicitudes', label: 'Gestión de Reportes', roles: ['super_admin', 'admin', 'viewer'], icon: 'chart' },
-  { href: '/alertas', label: 'Alertas', roles: ['super_admin', 'admin', 'viewer'], icon: 'bell' },
   { href: '/auditoria', label: 'Auditoría', roles: ['super_admin'], icon: 'clipboard' },
   { href: '/profile', label: 'Perfil', roles: ['super_admin', 'admin', 'viewer'], icon: 'user' },
 ]);
@@ -221,12 +246,14 @@ const mainClasses = computed(() => [
 ]);
 
 watch(isAlertsPage, (onAlerts) => {
+  if (!canSeeAlerts.value) return;
   if (onAlerts) {
     fetchAlerts({ markSeen: true });
   }
 });
 
 watch([alertsLatestAt, alertsTotal], ([latestAt, total]) => {
+  if (!canSeeAlerts.value) return;
   if (total <= 0 || isAlertsPage.value || !hasUnseenAlerts.value) {
     return;
   }
@@ -243,6 +270,7 @@ watch([alertsLatestAt, alertsTotal], ([latestAt, total]) => {
 }, { immediate: true });
 
 watch([alertsTotal, alertsLatestAt, isAlertsPage], ([total, latestAt, onAlerts]) => {
+  if (!canSeeAlerts.value) return;
   if (total === 0) {
     persistAlertsSeen(null, 0);
     persistToastAt(null, 0);
@@ -273,6 +301,7 @@ watch([alertsTotal, alertsLatestAt, isAlertsPage], ([total, latestAt, onAlerts])
 }, { immediate: true });
 
 onMounted(() => {
+  if (!canSeeAlerts.value) return;
   fetchAlerts({ markSeen: isAlertsPage.value });
   alertsRefreshTimer = setInterval(() => {
     if (document.visibilityState !== 'visible') return;
@@ -383,20 +412,20 @@ onBeforeUnmount(() => {
     <div :class="mainClasses">
       <Transition name="alert-toast">
         <div
-          v-if="alertToastVisible && alertsTotal > 0"
+          v-if="canSeeAlerts && alertToastVisible && alertsTotal > 0"
           class="fixed top-5 right-6 z-50 w-80 rounded-xl border border-brand-red/30 bg-brand-tint px-4 py-3 shadow-lg"
         >
           <div class="flex items-start gap-3">
             <div class="mt-1 h-2.5 w-2.5 rounded-full bg-brand-red"></div>
             <div class="flex-1">
               <p class="text-sm font-semibold text-brand-charcoal">
-                Tienes {{ alertsTotal }} alerta{{ alertsTotal === 1 ? '' : 's' }} activa{{ alertsTotal === 1 ? '' : 's' }}.
+                Tienes {{ alertsTotal }} solicitud{{ alertsTotal === 1 ? '' : 'es' }} pendiente{{ alertsTotal === 1 ? '' : 's' }} por aprobar.
               </p>
               <p v-if="alertToastDetails" class="text-xs text-brand-muted mt-1">
                 {{ alertToastDetails }}
               </p>
               <Link href="/alertas" class="mt-2 inline-flex text-xs font-semibold text-brand-red hover:text-brand-wine underline">
-                Ver alertas
+                Ver solicitudes
               </Link>
             </div>
             <button
@@ -433,6 +462,7 @@ onBeforeUnmount(() => {
 
         <div class="flex items-center gap-3">
           <Link
+            v-if="canSeeAlerts"
             href="/alertas"
             class="relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition"
             :class="hasUnseenAlerts
@@ -444,7 +474,7 @@ onBeforeUnmount(() => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 01-6 0m6 0H9" />
             </svg>
-            <span>Alertas</span>
+            <span>Aprobaciones</span>
             <span
               v-if="hasUnseenAlerts"
               class="inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -471,38 +501,6 @@ onBeforeUnmount(() => {
 
       <main class="flex-1 p-6 bg-brand-gray overflow-y-auto">
         <div class="max-w-7xl mx-auto">
-          <div
-            v-if="showAlertBanner"
-            class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
-            :class="hasUnseenAlerts
-              ? 'border-brand-red/30 bg-brand-tint text-brand-charcoal'
-              : 'border-brand-border-strong bg-white text-brand-charcoal'"
-          >
-            <div class="flex items-center gap-3">
-              <span
-                class="inline-flex h-2.5 w-2.5 rounded-full"
-                :class="hasUnseenAlerts ? 'bg-brand-red' : 'bg-brand-muted'"
-              ></span>
-              <div>
-                <p class="text-sm font-semibold">
-                  {{ alertBannerTitle }}
-                </p>
-                <p class="text-xs text-brand-muted">
-                  Tienes {{ alertsTotal }} alerta{{ alertsTotal === 1 ? '' : 's' }} en el sistema.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/alertas"
-              class="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition"
-              :class="hasUnseenAlerts
-                ? 'bg-brand-red text-white hover:bg-brand-wine'
-                : 'bg-brand-gray text-brand-charcoal hover:bg-brand-border'"
-              @click="markAlertsSeen"
-            >
-              Ver alertas
-            </Link>
-          </div>
           <div class="bg-brand-tint/60 rounded-2xl shadow-lg border border-brand-red/20 overflow-hidden ring-1 ring-brand-red/10">
             <div class="p-1 bg-gradient-to-r from-brand-tint via-white to-brand-gray"></div>
             <div class="p-6">
