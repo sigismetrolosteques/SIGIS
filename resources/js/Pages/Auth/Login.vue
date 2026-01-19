@@ -26,6 +26,11 @@ const form = useForm({
 });
 
 const submit = () => {
+    try {
+        window.sessionStorage?.setItem('showAlertsModalOnLogin', '1');
+    } catch (error) {
+        // ignore storage errors
+    }
     form.post(route('login'), {
         onSuccess: (response) => {
             // Manejo directo desde el controlador

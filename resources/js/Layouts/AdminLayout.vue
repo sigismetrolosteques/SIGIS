@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
+import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
   auth: Object,
@@ -120,6 +121,11 @@ const isAlertsPage = computed(() => {
   if (typeof window === 'undefined') return false;
   return window.location.pathname.startsWith('/alertas');
 });
+const loginAlertsModalVisible = ref(false);
+const loginAlertsModalShown = ref(false);
+const closeLoginAlertsModal = () => {
+  loginAlertsModalVisible.value = false;
+};
 const alertToastVisible = ref(false);
 let alertsRefreshTimer = null;
 let alertToastTimer = null;
@@ -300,7 +306,45 @@ watch([alertsTotal, alertsLatestAt, isAlertsPage], ([total, latestAt, onAlerts])
   }
 }, { immediate: true });
 
+const showLoginAlertsModal = () => {
+  if (isAlertsPage.value || loginAlertsModalShown.value) return;
+  loginAlertsModalVisible.value = true;
+  loginAlertsModalShown.value = true;
+  clearLoginAlertsFlag();
+};
+
+const shouldShowLoginAlertsModal = () => {
+  if (page.props.flash?.showAlertsModal) return true;
+  try {
+    return window.sessionStorage?.getItem('showAlertsModalOnLogin') === '1';
+  } catch (error) {
+    return false;
+  }
+};
+
+const clearLoginAlertsFlag = () => {
+  try {
+    window.sessionStorage?.removeItem('showAlertsModalOnLogin');
+  } catch (error) {
+    // ignore storage errors
+  }
+};
+
+watch(
+  () => page.props.flash?.showAlertsModal,
+  (shouldShow) => {
+    if (shouldShow) {
+      showLoginAlertsModal();
+    }
+  }
+);
+
 onMounted(() => {
+  if (shouldShowLoginAlertsModal()) {
+    showLoginAlertsModal();
+    clearLoginAlertsFlag();
+  }
+
   if (!canSeeAlerts.value) return;
   fetchAlerts({ markSeen: isAlertsPage.value });
   alertsRefreshTimer = setInterval(() => {
@@ -317,6 +361,32 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex h-screen bg-brand-gray font-sans text-brand-charcoal antialiased">
+    <Modal :show="loginAlertsModalVisible" @close="closeLoginAlertsModal" maxWidth="md">
+      <div class="p-6">
+        <h2 class="text-xl font-semibold text-brand-charcoal">
+          Puede que tengas notificaciones pendientes
+        </h2>
+        <p class="mt-2 text-sm text-brand-muted">
+          Revisa la bandeja de alertas para ver las solicitudes asignadas.
+        </p>
+        <div class="mt-6 flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full border border-brand-border px-4 py-2 text-sm font-semibold text-brand-charcoal transition hover:bg-brand-gray"
+            @click="closeLoginAlertsModal"
+          >
+            Ahora no
+          </button>
+          <Link
+            href="/alertas"
+            class="inline-flex items-center rounded-full bg-brand-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-wine"
+            @click="markAlertsSeen(); closeLoginAlertsModal();"
+          >
+            Ir a alertas
+          </Link>
+        </div>
+      </div>
+    </Modal>
     <!-- Sidebar -->
     <aside
       :class="[ 

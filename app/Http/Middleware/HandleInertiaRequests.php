@@ -32,6 +32,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                'showAlertsModal' => fn () => $request->session()->get('show_alerts_modal'),
             ],
             'alerts' => function () use ($request) {
                 return app(AlertSummary::class)->forUser($request->user());

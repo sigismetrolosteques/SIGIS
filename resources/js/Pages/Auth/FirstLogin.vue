@@ -48,6 +48,11 @@ const submit = async () => {
         });
 
         if (response.data.success) {
+            try {
+                window.sessionStorage?.setItem('showAlertsModalOnLogin', '1');
+            } catch (error) {
+                // ignore storage errors
+            }
             window.location.href = response.data.redirect;
         } else {
             console.error('Error del servidor:', response.data.message);

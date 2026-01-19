@@ -62,7 +62,7 @@ public function store(LoginRequest $request)
         $user->hasRole('super_admin') 
             ? RouteServiceProvider::SUPER_ADMIN_HOME 
             : RouteServiceProvider::ADMIN_HOME
-    );
+    )->with('show_alerts_modal', true);
 }
     /**
      * Destroy an authenticated session.

@@ -19,24 +19,59 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 const dialog = ref();
 const showSlot = ref(props.show);
+const closeTimer = ref(null);
+
+const clearCloseTimer = () => {
+    if (closeTimer.value) {
+        clearTimeout(closeTimer.value);
+        closeTimer.value = null;
+    }
+};
 
 watch(
     () => props.show,
-    () => {
-        if (props.show) {
+    (isVisible) => {
+        if (isVisible) {
+            clearCloseTimer();
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
-
-            dialog.value?.showModal();
+            try {
+                if (dialog.value?.showModal) {
+                    dialog.value.showModal();
+                } else if (dialog.value) {
+                    dialog.value.setAttribute('open', 'true');
+                }
+            } catch (error) {
+                if (dialog.value) {
+                    dialog.value.setAttribute('open', 'true');
+                }
+            }
         } else {
             document.body.style.overflow = '';
 
-            setTimeout(() => {
-                dialog.value?.close();
+            clearCloseTimer();
+            closeTimer.value = setTimeout(() => {
+                if (props.show) {
+                    clearCloseTimer();
+                    return;
+                }
+                try {
+                    if (dialog.value?.close) {
+                        dialog.value.close();
+                    } else if (dialog.value) {
+                        dialog.value.removeAttribute('open');
+                    }
+                } catch (error) {
+                    if (dialog.value) {
+                        dialog.value.removeAttribute('open');
+                    }
+                }
                 showSlot.value = false;
+                clearCloseTimer();
             }, 200);
         }
     },
+    { immediate: true, flush: 'post' },
 );
 
 const close = () => {
@@ -61,6 +96,7 @@ onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
 
     document.body.style.overflow = '';
+    clearCloseTimer();
 });
 
 const maxWidthClass = computed(() => {

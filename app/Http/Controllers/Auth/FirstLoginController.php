@@ -108,6 +108,7 @@ public function create(Request $request)
         }
 
         Auth::login($user);
+        $request->session()->flash('show_alerts_modal', true);
 
         // Respuesta JSON explícita
         return response()->json([
