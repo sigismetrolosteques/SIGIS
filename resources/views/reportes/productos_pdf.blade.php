@@ -63,8 +63,9 @@
             text-align: center;
         }
         .pdf-footer img {
-            width: 100%;
-            max-height: 90px;
+            width: 1190px;
+            height: auto;
+            max-width: 100%;
             object-fit: contain;
         }
     </style>

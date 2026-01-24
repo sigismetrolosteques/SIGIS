@@ -16,7 +16,12 @@
     th { background:#F9FAFB; }
     .mono { font-family: monospace; }
     .pdf-footer { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; }
-    .pdf-footer img { width: 100%; max-height: 90px; object-fit: contain; }
+    .pdf-footer img {
+      width: 1190px;
+      height: auto;
+      max-width: 100%;
+      object-fit: contain;
+    }
   </style>
 </head>
 <body>

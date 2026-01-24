@@ -9,7 +9,7 @@
             font-size: 12px;
             color: #111827;
             margin: 0;
-            padding: 20px 24px 120px;
+            padding: 20px 24px 150px;
         }
         .pdf-header {
             text-align: center;
@@ -109,8 +109,9 @@
             text-align: center;
         }
         .pdf-footer img {
-            width: 100%;
-            max-height: 90px;
+            width: 1190px;
+            height: auto;
+            max-width: 100%;
             object-fit: contain;
         }
     </style>

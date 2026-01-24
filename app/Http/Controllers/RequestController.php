@@ -211,6 +211,8 @@ class RequestController extends Controller
             'justification.string' => 'La justificación debe ser un texto válido.',
             'justification.min' => 'La justificación debe tener al menos :min caracteres.',
             'justification.max' => 'La justificación no puede superar :max caracteres.',
+            'priority.required' => 'Debes seleccionar la prioridad.',
+            'priority.in' => 'La prioridad seleccionada no es válida.',
             'attachment.file' => 'El documento adjunto debe ser un archivo válido.',
             'attachment.max' => 'El documento adjunto no puede superar los 5 MB.',
             'attachment.mimes' => 'El documento adjunto debe ser un archivo de tipo PDF o imagen.',
@@ -218,14 +220,19 @@ class RequestController extends Controller
             'approved_quantity.min' => 'La cantidad aprobada debe ser al menos 1.',
         ];
 
+        $role = $this->resolveWorkflowRole(Auth::user());
+        $action = $request->input('action');
+        $priorityRule = ($action === 'approve_stage' && $role === 'normalizacion')
+            ? 'required|in:alto,medio,bajo'
+            : 'nullable|in:alto,medio,bajo';
+
         $data = $request->validate([
             'action' => 'required|in:approve_stage,reject_stage,compras_approve,compras_reject,finalize_order',
             'justification' => 'required|string|min:3|max:1000',
+            'priority' => $priorityRule,
             'attachment' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png',
             'approved_quantity' => 'nullable|integer|min:1',
         ], $messages);
-
-        $role = $this->resolveWorkflowRole(Auth::user());
         $inventory = $solicitud->inventory_id ? Inventory::find($solicitud->inventory_id) : null;
 
         if ($solicitud->inventory_id && !$inventory) {
@@ -283,6 +290,9 @@ class RequestController extends Controller
                         break;
                     }
 
+                    if ($role === 'normalizacion') {
+                        $solicitud->priority = $data['priority'];
+                    }
                     $solicitud->status = $nextStage;
                     $solicitud->to_gerencia_id = $this->getGerenciaIdForStage($nextStage);
                     $solicitud->save();

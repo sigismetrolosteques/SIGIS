@@ -82,6 +82,10 @@ const canSeeAlerts = computed(() => {
   if (typeof alerts.value.canApprove === 'boolean') return alerts.value.canApprove;
   return workflowRole.value !== 'viewer';
 });
+const canSeeAlertsModal = computed(() => {
+  const allowedRoles = ['normalizacion', 'vp_mantenimiento', 'vp_soporte', 'administracion', 'compras'];
+  return allowedRoles.includes(workflowRole.value);
+});
 const alertsLatestAt = computed(() => {
   const value = alerts.value.latestAt;
   if (!value) return null;
@@ -308,12 +312,14 @@ watch([alertsTotal, alertsLatestAt, isAlertsPage], ([total, latestAt, onAlerts])
 
 const showLoginAlertsModal = () => {
   if (isAlertsPage.value || loginAlertsModalShown.value) return;
+  if (!canSeeAlertsModal.value || alertsTotal.value <= 0) return;
   loginAlertsModalVisible.value = true;
   loginAlertsModalShown.value = true;
   clearLoginAlertsFlag();
 };
 
 const shouldShowLoginAlertsModal = () => {
+  if (!canSeeAlertsModal.value || alertsTotal.value <= 0) return false;
   if (page.props.flash?.showAlertsModal) return true;
   try {
     return window.sessionStorage?.getItem('showAlertsModalOnLogin') === '1';
@@ -398,7 +404,7 @@ onBeforeUnmount(() => {
     >
       <div class="pointer-events-none absolute inset-y-0 left-0 w-1 bg-brand-border-strong"></div>
       <div class="relative h-20 flex items-center justify-center border-b border-brand-border-strong bg-brand-border-strong">
-        <h1 class="text-2xl font-bold tracking-wider font-mono text-brand-charcoal">
+        <h1 class="text-4xl font-bold tracking-wider font-mono text-brand-charcoal">
           SIGIS
         </h1>
       </div>

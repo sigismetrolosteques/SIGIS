@@ -35,6 +35,7 @@ const statusOptions = computed(() => props.workflow?.status_options ?? {});
 
 const isSuperAdmin = computed(() => workflowRole.value === 'super_admin');
 const isNormalizacion = computed(() => ['super_admin', 'normalizacion'].includes(workflowRole.value));
+const canEditPriority = computed(() => workflowRole.value === 'normalizacion');
 const isVpMantenimiento = computed(() => ['super_admin', 'vp_mantenimiento'].includes(workflowRole.value));
 const isVpSoporte = computed(() => ['super_admin', 'vp_soporte'].includes(workflowRole.value));
 const isAdministracion = computed(() => ['super_admin', 'administracion'].includes(workflowRole.value));
@@ -56,6 +57,7 @@ const actionModal = ref({
 const actionForm = useForm({
   action: '',
   justification: '',
+  priority: '',
   approved_quantity: '',
   attachment: null,
 });
@@ -64,6 +66,16 @@ const attachmentInput = ref(null);
 const actionError = ref(null);
 const baseActionClass = 'inline-flex h-10 w-10 items-center justify-center rounded-full transition text-xs font-medium';
 const finalStatuses = ['aprobado', 'rechazado'];
+const priorityLabels = {
+  alto: 'Alto',
+  medio: 'Medio',
+  bajo: 'Bajo',
+};
+const priorityOptions = [
+  { value: 'alto', label: 'Alto - Esta solicitud tiene un nivel de urgencia o requerimiento alto.' },
+  { value: 'medio', label: 'Medio - Esta solicitud tiene un nivel de urgencia o requerimiento medio.' },
+  { value: 'bajo', label: 'Bajo - Esta solicitud tiene un nivel de urgencia o requerimiento bajo.' },
+];
 
 function formatStatus(status, viewerMask = false) {
   const labels = statusOptions.value || {};
@@ -71,6 +83,10 @@ function formatStatus(status, viewerMask = false) {
     return labels[status] || 'En revisión';
   }
   return labels[status] ?? status;
+}
+
+function formatPriority(priority) {
+  return priorityLabels[priority] ?? 'Sin definir';
 }
 
 function formatDate(dateString) {
@@ -93,10 +109,6 @@ function formatShortDate(dateString) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
-}
-
-function latestJustification(solicitud) {
-  return solicitud.latest_status_log?.justification ?? 'Sin justificación';
 }
 
 function statusBadgeClass(status) {
@@ -173,6 +185,7 @@ function openActionModal(solicitud, action) {
   };
   actionForm.action = action;
   actionForm.justification = '';
+  actionForm.priority = solicitud?.priority ?? '';
   actionForm.approved_quantity = action === 'compras_approve'
     ? remainingQuantity(solicitud)
     : '';
@@ -207,6 +220,9 @@ function submitAction() {
     approved_quantity: actionModal.value.action === 'compras_approve'
       ? actionForm.approved_quantity
       : null,
+    priority: actionModal.value.action === 'approve_stage'
+      ? (actionForm.priority || null)
+      : null,
   };
 
   actionForm.transform(() => payload).post(route('solicitudes.updateStatus', actionModal.value.solicitud.id), {
@@ -218,6 +234,7 @@ function submitAction() {
     },
     onError: (errors) => {
       actionError.value = errors?.approved_quantity
+        || errors?.priority
         || errors?.attachment
         || errors?.justification
         || errors?.action
@@ -355,6 +372,10 @@ function attachmentUrl(log) {
               <p class="text-sm text-gray-500">Cantidad</p>
               <p class="text-gray-800">{{ detalleSolicitud.quantity }}</p>
             </div>
+            <div>
+              <p class="text-sm text-gray-500">Prioridad</p>
+              <p class="text-gray-800">{{ formatPriority(detalleSolicitud.priority) }}</p>
+            </div>
             <div v-if="!isViewer">
               <p class="text-sm text-gray-500">Origen</p>
               <p class="text-gray-800">{{ detalleSolicitud.from_gerencia?.name ?? 'Sin gerencia' }}</p>
@@ -454,6 +475,27 @@ function attachmentUrl(log) {
               placeholder="Describe la razón de la acción"
               required
             ></textarea>
+          </div>
+          <div v-if="actionForm.action === 'approve_stage'">
+            <label class="text-sm font-medium text-gray-700">Prioridad</label>
+            <select
+              v-model="actionForm.priority"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-red"
+              :disabled="!canEditPriority"
+              :required="canEditPriority"
+            >
+              <option value="">Sin definir</option>
+              <option
+                v-for="option in priorityOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <p v-if="!canEditPriority" class="text-xs text-gray-500 mt-1">
+              Solo Normalización puede establecer la prioridad.
+            </p>
           </div>
           <div v-if="actionForm.action === 'compras_approve'">
             <label class="text-sm font-medium text-gray-700">Cantidad aprobada</label>
@@ -621,7 +663,7 @@ function attachmentUrl(log) {
                 Estado
               </th>
               <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                Justificación
+                Prioridad
               </th>
             </tr>
           </thead>
@@ -725,7 +767,7 @@ function attachmentUrl(log) {
               </td>
               <td class="px-4 py-3 align-top text-sm text-gray-700">
                 <span class="block max-w-[18rem] break-words">
-                  {{ latestJustification(solicitud) }}
+                  {{ formatPriority(solicitud.priority) }}
                 </span>
               </td>
             </tr>

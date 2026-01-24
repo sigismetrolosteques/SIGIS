@@ -23,6 +23,7 @@ class Solicitud extends Model
         'from_gerencia_id',
         'to_gerencia_id',
         'status',
+        'priority',
         'description',
         'return_date',
     ];

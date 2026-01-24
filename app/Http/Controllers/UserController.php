@@ -120,17 +120,25 @@ class UserController extends Controller
         $user->assignRole($this->resolveRoleForGerencia($gerencia->name));
 
         // Enviar correo de bienvenida
+        $mailError = null;
         try {
             Mail::to($user->email)->send(new WelcomeUserMail(
                 $user->name,
                 $user->email,
                 $tempPassword
             ));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            $mailError = 'Usuario creado, pero no se pudo enviar el correo de bienvenida. Verifica la configuración de correo.';
             Log::error('Error enviando correo de bienvenida: ' . $e->getMessage());
         }
 
-        return redirect()->route('user.index')->with('success', 'Usuario creado correctamente');
+        $redirect = redirect()->route('user.index')->with('success', 'Usuario creado correctamente');
+
+        if ($mailError) {
+            return $redirect->withErrors(['error' => $mailError]);
+        }
+
+        return $redirect;
     }
 
     public function edit(User $user)
