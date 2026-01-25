@@ -375,6 +375,6 @@ const clearError = (field) => {
 }
 
 .border-red-500 {
-  border-color: #ef4444;
+  border-color: #AB2423;
 }
 </style>

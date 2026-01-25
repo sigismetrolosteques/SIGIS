@@ -106,7 +106,7 @@ function renderCharts(solicitudesData = []) {
       type: 'doughnut',
       data: {
         labels: ['En proceso', 'Aprobado', 'Rechazado'],
-        datasets: [{ data: [enProceso, aprobados, rechazados], backgroundColor: ['#F9FAFB', '#D62828', '#B91C1C'] }]
+        datasets: [{ data: [enProceso, aprobados, rechazados], backgroundColor: ['#F9FAFB', '#AB2423', '#AB2423'] }]
       },
       options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
     });
@@ -127,7 +127,7 @@ function renderCharts(solicitudesData = []) {
         datasets: [{
           label: 'Solicitudes',
           data: Object.values(byProduct),
-          backgroundColor: '#D62828'
+          backgroundColor: '#AB2423'
         }]
       },
       options: {

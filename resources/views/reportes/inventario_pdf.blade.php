@@ -23,7 +23,7 @@
         }
         h1 {
             text-align: center;
-            color: #D62828;
+            color: #AB2423;
             margin-bottom: 12px;
         }
         .meta {

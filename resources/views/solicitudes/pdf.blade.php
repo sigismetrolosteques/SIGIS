@@ -25,7 +25,7 @@
             text-align: center;
             font-size: 22px;
             margin-bottom: 20px;
-            color: #D62828;
+            color: #AB2423;
         }
         .section {
             margin-bottom: 15px;

@@ -601,7 +601,7 @@ onBeforeUnmount(() => {
 }
 
 .menu-active {
-  background-color: #E11D48;
+  background-color: #AB2423;
   color: #FFFFFF;
   border-left-color: #FFFFFF;
 }

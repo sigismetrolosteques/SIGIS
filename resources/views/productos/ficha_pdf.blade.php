@@ -21,7 +21,7 @@
             text-align: center;
             font-size: 20px;
             margin: 12px 0 18px;
-            color: #D62828;
+            color: #AB2423;
         }
         .section {
             margin-bottom: 8px;
@@ -148,7 +148,7 @@
         @endif
     </div>
 
-    <h2 style="margin-top: 18px; color: #B91C1C;">Inventario asociado</h2>
+    <h2 style="margin-top: 18px; color: #AB2423;">Inventario asociado</h2>
     <div class="box">
         <div class="section">
             <span class="label">Cantidad total:</span>
