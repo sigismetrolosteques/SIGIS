@@ -4,24 +4,80 @@
   <meta charset="utf-8">
   <title>Reporte Solicitudes</title>
   <style>
-    body { font-family: DejaVu Sans, Arial, sans-serif; color:#111827; font-size:12px; margin:0; padding:18px; padding-bottom:110px; }
-    .pdf-header { text-align:center; margin-bottom:18px; }
-    .pdf-header img { width:100%; max-height:110px; object-fit:contain; }
-    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-    .title { font-size:18px; font-weight:700; }
-    .summary { display:flex; gap:12px; margin-bottom:12px; }
-    .card { background:#F9FAFB; padding:8px 12px; border-radius:6px; }
-    table { width:100%; border-collapse: collapse; margin-top:8px; }
-    th, td { padding:8px; border:1px solid #E5E7EB; text-align:left; font-size:11px; }
-    th { background:#F9FAFB; }
-    .mono { font-family: monospace; }
-    .pdf-footer { position: fixed; left: 0; right: 0; bottom: 0; text-align: center; }
-    .pdf-footer img {
-      width: 1190px;
-      height: auto;
-      max-width: 100%;
-      object-fit: contain;
-    }
+		@page {
+			margin: 0cm; /* Margen general */
+			margin-bottom: 220px; /* Espacio reservado para el cintillo inferior */
+		}
+
+		body { 
+			font-family: DejaVu Sans, Arial, sans-serif; 
+			color:#111827; 
+			font-size:12px; 
+			margin:0; 
+            padding-top: 20px;
+			padding-left: 70px;
+			padding-right: 70px;
+            padding-bottom: 10px; 
+		}
+		.pdf-header { 
+			text-align:center; 
+			margin-bottom:18px; 
+		}
+		.pdf-header img { 
+			width:90%; 
+			max-height:100px; 
+			object-fit:contain; 
+		}
+		.header { 
+			display:flex; 
+			justify-content:space-between; 
+			align-items:center; 
+			margin-bottom:16px; 
+		}
+		.title { 
+			font-size:18px; 
+			font-weight:700; 
+		}
+		.summary { 
+			display:flex; 
+			gap:12px; 
+			margin-bottom:12px; 
+		}
+		.card { 
+			background:#F9FAFB; 
+			padding:8px 12px; 
+			border-radius:6px; 
+		}
+		table { 
+			width:100%; 
+			border-collapse: collapse; 
+			margin-top:8px; 
+		}
+		th, td { 
+			padding:8px; 
+			border:1px solid #E5E7EB; 
+			text-align:left; 
+			font-size:11px; 
+		}
+		th { 
+			background:#F9FAFB; 
+		}
+		.mono { 
+			font-family: monospace; 
+		}
+		.pdf-footer {
+			position: fixed;
+			left: 0px;
+			right: 0px;
+			bottom: -140.5px;
+			height: 150px;
+			text-align: center;
+		}
+		.pdf-footer img {
+			width: 100.3%;
+			height: 250px;
+			object-fit: contain;
+		}
   </style>
 </head>
 <body>

@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <title>Ficha de Producto {{ $product->code }}</title>
     <style>
+	
+		@page {
+			margin-bottom: 190px; /* Espacio reservado para el cintillo inferior */
+		}
         body {
             font-family: Arial, sans-serif;
             font-size: 13px;
             color: #111827;
             margin: 0;
             padding: 20px;
-            padding-bottom: 110px;
+            padding-bottom: 10px;
         }
         .pdf-header img {
             width: 100%;
@@ -73,13 +77,12 @@
             position: fixed;
             left: 0;
             right: 0;
-            bottom: 0;
+            bottom: -205px;
             text-align: center;
         }
         .pdf-footer img {
-            width: 1190px;
-            height: auto;
-            max-width: 100%;
+            width: 113%;
+            height: 200px;
             object-fit: contain;
         }
     </style>

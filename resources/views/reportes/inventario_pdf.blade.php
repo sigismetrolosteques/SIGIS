@@ -4,21 +4,27 @@
     <meta charset="UTF-8">
     <title>Reporte de Inventario</title>
     <style>
+		@page {
+			margin: 0cm; /* Margen general */
+			margin-bottom: 220px; /* Espacio reservado para el cintillo inferior */
+		}
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
             color: #111827;
             margin: 0;
-            padding: 18px;
-            padding-bottom: 110px;
+            padding-top: 20px;
+			padding-left: 70px;
+			padding-right: 70px;
+            padding-bottom: 10px;
         }
         .pdf-header {
             text-align: center;
             margin-bottom: 18px;
         }
         .pdf-header img {
-            width: 100%;
-            max-height: 110px;
+            width: 90%;
+            max-height: 100px;
             object-fit: contain;
         }
         h1 {
@@ -49,25 +55,26 @@
         th {
             background: #F9FAFB;
         }
-        .footer {
+         .footer {
             margin-top: 16px;
             text-align: center;
             font-size: 10px;
             color: #6B7280;
         }
-        .pdf-footer {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            text-align: center;
-        }
-        .pdf-footer img {
-            width: 1190px;
-            height: auto;
-            max-width: 100%;
-            object-fit: contain;
-        }
+		.pdf-footer {
+			position: fixed;
+			left: 0px;
+			right: 0px;
+			bottom: -140.5px;
+			height: 150px;
+			text-align: center;
+		}
+    
+		.pdf-footer img {
+			width: 100.3%;
+			height: 250px;
+			object-fit: contain;
+		}
     </style>
 </head>
 <body>
